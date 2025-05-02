@@ -7,16 +7,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Auth {
-  id        Int      @id @default(autoincrement())
-  name      String?
-  email     String?  @unique
-  password  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model User {
+  id             Int       @id @default(autoincrement())
+  firstName      String?
+  lastName       String?
+  email          String    @unique
+  password       String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  role           String?   @default("user")
+  status         Boolean   @default(true)
+  profilePicture String?
+  dateOfBirth    DateTime?
+  gender         String?
+  addressLine1   String?
+  addressLine2   String?
+  city           String?
+  state          String?
+  zipCode        String?
+  phoneNumber    String?
+  phoneExtension String?
+  language       String?
+  country        String?
 
-  events    Event[]  
-  // joinedEvents JoinEvent[]  
+  events Event[]
+  // joinedEvents JoinEvent[]
 }
 
 model Event {
@@ -26,14 +41,13 @@ model Event {
   location    String
   date        DateTime
   creatorId   Int
-  creator     Auth     @relation(fields: [creatorId], references: [id])
+  creator     User     @relation(fields: [creatorId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@unique([title, date]) 
+  // attendees JoinEvent[]
 
-  // JoinEvent table ke through relationship define hoga
-  // attendees   JoinEvent[] 
+  @@unique([title, date])
 }
 
 // model JoinEvent {
@@ -42,12 +56,12 @@ model Event {
 //   eventId   Int
 //   createdAt DateTime @default(now())
 
-//   // Relation to User (Auth model)
-//   user      Auth     @relation(fields: [userId], references: [id])
+//   // Relation to User (User model)
+//   user User @relation(fields: [userId], references: [id])
 
 //   // Relation to Event
-//   event     Event    @relation(fields: [eventId], references: [id])
+//   event Event @relation(fields: [eventId], references: [id])
 
 //   // Unique constraint to prevent duplicate joins
-//   @@unique([userId, eventId])  // Ensure user can't join the same event more than once
+//   @@unique([userId, eventId]) // Ensure user can't join the same event more than once
 // }
