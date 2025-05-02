@@ -1,6 +1,6 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { findUserByEmail, createUser } = require("../models/authModels");
+const { findUserByEmail, createUser } = require("../models/userModels");
 require("dotenv").config();
 
 // Email validation
@@ -11,9 +11,9 @@ const isStrongPassword = (password) =>
   typeof password === "string" && password.length >= 6;
 
 exports.signup = async (req, res) => {
-  const { name, email, password } = req.body;
+  const { firstName,lastName, email, password } = req.body;
 
-  if (!name || !email || !password) {
+  if (!firstName || !lastName || !email || !password) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
@@ -33,7 +33,8 @@ exports.signup = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = await createUser({
-      name,
+      firstName,
+      lastName,
       email,
       password: hashedPassword,
     });
@@ -42,7 +43,8 @@ exports.signup = async (req, res) => {
       message: "User created successfully",
       user: {
         id: newUser.id,
-        name: newUser.name,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
         email: newUser.email,
       },
     });
@@ -85,7 +87,8 @@ exports.login = async (req, res) => {
       refreshToken,
       user: {
         id: user.id,
-        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
       },
     });
@@ -135,3 +138,4 @@ exports.refreshToken = async (req, res) => {
     res.status(500).json({ message: "Something went wrong", error: error.message });
   }
 };
+
