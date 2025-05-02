@@ -16,7 +16,7 @@ model Auth {
   updatedAt DateTime @updatedAt
 
   events    Event[]  
-  joinedEvents JoinEvent[]  // Users ke events join karne ki relationship
+  // joinedEvents JoinEvent[]  
 }
 
 model Event {
@@ -33,21 +33,21 @@ model Event {
   @@unique([title, date]) 
 
   // JoinEvent table ke through relationship define hoga
-  attendees   JoinEvent[] 
+  // attendees   JoinEvent[] 
 }
 
-model JoinEvent {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  eventId   Int
-  createdAt DateTime @default(now())
+// model JoinEvent {
+//   id        Int      @id @default(autoincrement())
+//   userId    Int
+//   eventId   Int
+//   createdAt DateTime @default(now())
 
-  // Relation to User (Auth model)
-  user      Auth     @relation(fields: [userId], references: [id])
+//   // Relation to User (Auth model)
+//   user      Auth     @relation(fields: [userId], references: [id])
 
-  // Relation to Event
-  event     Event    @relation(fields: [eventId], references: [id])
+//   // Relation to Event
+//   event     Event    @relation(fields: [eventId], references: [id])
 
-  // Unique constraint to prevent duplicate joins
-  @@unique([userId, eventId])  // Ensure user can't join the same event more than once
-}
+//   // Unique constraint to prevent duplicate joins
+//   @@unique([userId, eventId])  // Ensure user can't join the same event more than once
+// }
