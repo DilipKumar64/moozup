@@ -22,4 +22,13 @@ router.get("/profile", authenticateJWT, (req, res) => {
     });
 });
 
+// Get user profile by ID
+router.get("/profile/:id", userController.getProfileById);
+
+// Update user profile
+router.put("/profile/:id", userController.updateProfile);
+
+// Delete user account
+router.delete("/delete/:id", userController.deleteAccount);
+
 module.exports = router;
