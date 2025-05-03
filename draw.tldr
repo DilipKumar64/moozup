@@ -1,0 +1,2 @@
+// new event fields add
+eventid, eventcategory, eventname,eventdescription,logo, banner, eventstartdate,eventenddate,isprivateevent,address1,adders2,city,state, country,zipcode,HostOrganizationName,HostOrganizationDescription,HostWebsiteUrl,EventUrl,IsActive,IsPublished,IsFreeEvent,MarkDelete,DateTimeCreated,CreatedBy,DateTimeModified,ModifiedBy,SponsorLogoPath

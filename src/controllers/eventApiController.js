@@ -8,15 +8,66 @@ const {
 
 // Create Event
 exports.createEvent = async (req, res) => {
-  const { title, description, location, date, creatorId } = req.body;
+  const {
+    title,
+    eventCategory,
+    eventName,
+    eventDescription,
+    logo,
+    banner,
+    eventStartDate,
+    eventEndDate,
+    isPrivateEvent,
+    address1,
+    address2,
+    city,
+    state,
+    country,
+    zipCode,
+    hostOrganizationName,
+    hostOrganizationDescription,
+    hostWebsiteUrl,
+    eventUrl,
+    isActive,
+    isPublished,
+    isFreeEvent,
+    markDelete,
+    sponsorLogoPath,
+    creatorId,
+  } = req.body;
 
   // Input validation
-  if (!title || !description || !location || !date || !creatorId) {
-    return res.status(400).json({ message: "All fields are required" });
+  if (
+    !title ||
+    !eventCategory ||
+    !eventName ||
+    !eventDescription ||
+    !creatorId ||
+    !eventStartDate ||
+    !eventEndDate ||
+    !address1 ||
+    !city ||
+    !state ||
+    !country ||
+    !zipCode ||
+    !hostOrganizationName ||
+    !eventUrl ||
+    !logo ||
+    !banner ||
+    !hostOrganizationDescription ||
+    !hostWebsiteUrl ||
+    !isPrivateEvent ||
+    !isActive ||
+    !isPublished ||
+    !isFreeEvent ||
+    !markDelete ||
+    !sponsorLogoPath
+  ) {
+    return res.status(400).json({ message: "All required fields are missing" });
   }
 
   // Convert creatorId to an integer
-  const parsedCreatorId = Number(creatorId); // Using Number() to convert to integer
+  const parsedCreatorId = Number(creatorId); // Convert to integer
 
   // Check if creatorId is valid
   if (isNaN(parsedCreatorId)) {
@@ -24,16 +75,40 @@ exports.createEvent = async (req, res) => {
   }
 
   try {
-    // Call the model to create the event
+    // Create the event using Prisma ORM
     const newEvent = await createEvent({
       title,
-      description,
-      location,
-      date: new Date(date), // Ensure the date is in proper format
-      creatorId: parsedCreatorId, // Use the parsed creatorId
+      eventCategory,
+      eventName,
+      eventDescription,
+      logo,
+      banner,
+      eventStartDate: new Date(eventStartDate), // Ensure date is in correct format
+      eventEndDate: new Date(eventEndDate), // Ensure date is in correct format
+      isPrivateEvent: isPrivateEvent || false,
+      address1,
+      address2,
+      city,
+      state,
+      country,
+      zipCode,
+      hostOrganizationName,
+      hostOrganizationDescription,
+      hostWebsiteUrl,
+      eventUrl,
+      isActive: isActive || true,
+      isPublished: isPublished || false,
+      isFreeEvent: isFreeEvent || false,
+      markDelete: markDelete || false,
+      dateTimeCreated: new Date(),
+      createdBy: parsedCreatorId,
+      dateTimeModified: new Date(),
+      modifiedBy: parsedCreatorId,
+      sponsorLogoPath,
+      creatorId: parsedCreatorId, // Use parsed creatorId
     });
 
-    // Return the response with created event
+    // Return success response with created event
     res.status(201).json({
       message: "Event created successfully",
       event: newEvent,
@@ -78,6 +153,7 @@ exports.getEventDetails = async (req, res) => {
   }
 };
 
+// Update Event
 exports.updateEvent = async (req, res) => {
   const { id } = req.params;
   const updatedData = req.body;
