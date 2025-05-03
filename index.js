@@ -3,7 +3,7 @@ require("dotenv").config();
 const cors = require("cors");
 const morgan = require("morgan");
 const authRoutes = require("./src/routes/auth.route");
-const eventApiRoutes = require("./src/routes/eventApiRoutes");
+const eventApiRoutes = require("./src/routes/eventApi.routes");
 const userRoutes = require("./src/routes/user.routes");
 
 const app = express();

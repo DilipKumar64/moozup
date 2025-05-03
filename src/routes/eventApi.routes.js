@@ -1,5 +1,5 @@
 const express = require('express')
-const eventController = require("../controllers/eventApiController");
+const eventController = require("../controllers/eventApi.controller");
 const authenticateJWT = require('../middlewares/auth.middleware');
 const multer = require('multer')
 
