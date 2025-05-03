@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { findUserByEmail, createUser, findUserById, updateUser, deleteUser } = require("../models/userModels");
+const { findUserByEmail, createUser, findUserById, updateUser, deleteUser, updateUserPassword } = require("../models/userModels");
+const { sendWelcomeEmail, sendPasswordResetEmail } = require("../utils/mailer");
 require("dotenv").config();
 
 // Email validation
@@ -9,10 +10,6 @@ const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 // Password strength
 const isStrongPassword = (password) =>
   typeof password === "string" && password.length >= 6;
-
-const isIdValid = (id) => {
-  return !isNaN(parseInt(id)) && parseInt(id) > 0;
-}
 
 exports.signup = async (req, res) => {
   const { firstName,lastName, email, password } = req.body;
@@ -43,6 +40,11 @@ exports.signup = async (req, res) => {
       password: hashedPassword,
     });
 
+    // Send welcome email (do not block response on email sending)
+    // sendWelcomeEmail({ to: email, firstName, email }).catch((err) => {
+    //   console.error("Failed to send welcome email:", err);
+    // });
+
     res.status(201).json({
       message: "User created successfully",
       user: {
@@ -71,14 +73,14 @@ exports.login = async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid password" });
     }
-
+    
     // Generate tokens
     const accessToken = jwt.sign(
       { id: user.id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
-
+    
     const refreshToken = jwt.sign(
       { id: user.id, email: user.email },
       process.env.REFRESH_TOKEN_SECRET,
@@ -143,127 +145,61 @@ exports.refreshToken = async (req, res) => {
   }
 };
 
-exports.getProfileById = async (req, res) => {
-  const { id } = req.params;
-
-  if (!isIdValid(id)) {
-    return res.status(400).json({ message: "Invalid user ID" });
-  }
-
+exports.resetPassword = async (req, res) => {
   try {
-    const user = await findUserById(id);
+    const { userId } = req.params;
+    const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ 
+        message: "Both old password and new password are required" 
+      });
+    }
+
+    // Validate password strength
+    if (!isStrongPassword(newPassword)) {
+      return res.status(400).json({ 
+        message: "New password must be at least 6 characters long" 
+      });
+    }
+    
+    // Validate user exists
+    const user = await findUserById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Remove sensitive information before sending response
-    const { password, ...userWithoutPassword } = user;
+    // Verify old password
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Old password is incorrect" });
+    }
     
-    res.status(200).json({
-      message: "User profile retrieved successfully",
-      user: userWithoutPassword
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    // Update user's password in database
+    await updateUserPassword(userId, hashedPassword);
+    
+    // Send email notification and do not block response on email sending
+    // sendPasswordResetEmail({
+    //   to: user.email,
+    //   firstName: user.firstName,
+    //   newPassword
+    // }).catch((err) => {
+    //   console.error("Failed to send reset email:", err);
+    // });
+    
+    res.status(200).json({ 
+      message: "Password updated successfully. Please check your email for confirmation."
     });
   } catch (error) {
-    console.error("Get profile error:", error);
-    res.status(500).json({ message: "Something went wrong", error: error.message });
+    console.error("Password reset error:", error);
+    res.status(500).json({ 
+      message: "Error updating password",
+      error: error.message 
+    });
   }
 };
 
-exports.updateProfile = async (req, res) => {
-  const { id } = req.params;
-  const { 
-    firstName, 
-    lastName, 
-    email, // We'll keep this in destructuring but won't use it
-    profilePicture,
-    dateOfBirth,
-    gender,
-    addressLine1,
-    addressLine2,
-    city,
-    state,
-    zipCode,
-    phoneNumber,
-    phoneExtension,
-    language,
-    country
-  } = req.body;
-
-  if (!isIdValid(id)) {
-    return res.status(400).json({ message: "Invalid user ID" });
-  }
-
-  // Validate required fields
-  if (!firstName) {
-    return res.status(400).json({ message: "First name is required" });
-  }
-
-  // If email is provided in the request, return error
-  if (email) {
-    return res.status(400).json({ message: "Email cannot be updated through this endpoint" });
-  }
-
-  try {
-    // Check if user exists
-    const existingUser = await findUserById(id);
-    if (!existingUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Update user profile
-    const updatedUser = await updateUser(id, {
-      firstName,
-      lastName,
-      profilePicture,
-      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-      gender,
-      addressLine1,
-      addressLine2,
-      city,
-      state,
-      zipCode,
-      phoneNumber,
-      phoneExtension,
-      language,
-      country
-    });
-
-    // Remove sensitive information before sending response
-    const { password, ...userWithoutPassword } = updatedUser;
-
-    res.status(200).json({
-      message: "Profile updated successfully",
-      user: userWithoutPassword
-    });
-  } catch (error) {
-    console.error("Update profile error:", error);
-    res.status(500).json({ message: "Something went wrong", error: error.message });
-  }
-};
-
-exports.deleteAccount = async (req, res) => {
-  const { id } = req.params;
-
-  if (!isIdValid(id)) {
-    return res.status(400).json({ message: "Invalid user ID" });
-  }
-
-  try {
-    // Check if user exists
-    const existingUser = await findUserById(id);
-    if (!existingUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Delete the user
-    await deleteUser(id);
-
-    res.status(200).json({
-      message: "Account deleted successfully"
-    });
-  } catch (error) {
-    console.error("Delete account error:", error);
-    res.status(500).json({ message: "Something went wrong", error: error.message });
-  }
-};
 
