@@ -4,8 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  url       = env("LOCAL_DATABASE_URL")
 }
 
 model User {
@@ -30,9 +29,13 @@ model User {
   phoneExtension String?
   language       String?
   country        String?
+  followersCount Int       @default(0)
+  followingCount Int       @default(0)
 
   events Event[]
   // joinedEvents JoinEvent[]
+  followers      Follow[]  @relation("followers")
+  following      Follow[]  @relation("following")
 }
 
 model Event {
@@ -49,6 +52,17 @@ model Event {
   // attendees JoinEvent[]
 
   @@unique([title, date])
+}
+
+model Follow {
+  id           Int      @id @default(autoincrement())
+  follower     User     @relation("following", fields: [followerId], references: [id])
+  followerId   Int
+  following    User     @relation("followers", fields: [followingId], references: [id])
+  followingId  Int
+  createdAt    DateTime @default(now())
+
+  @@unique([followerId, followingId])
 }
 
 // model JoinEvent {

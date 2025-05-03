@@ -1,4 +1,5 @@
 const { findUserById, updateUser, deleteUser } = require('../models/userModels');
+const { createFollow, findFollow, countFollowers, countFollowing } = require('../models/follow.model');
 
 const isIdValid = (id) => {
     return !isNaN(parseInt(id)) && parseInt(id) > 0;
@@ -129,4 +130,33 @@ exports.deleteAccount = async (req, res) => {
         console.error("Delete account error:", error);
         res.status(500).json({ message: "Something went wrong", error: error.message });
     }
+};
+
+exports.followUser = async (req, res) => {
+  const followerId = req.user.id; // from JWT
+  const followingId = parseInt(req.params.id);
+
+  if (followerId === followingId) {
+    return res.status(400).json({ message: "You cannot follow yourself." });
+  }
+
+  try {
+    // Check if already following
+    const existing = await findFollow(followerId, followingId);
+    if (existing) {
+      return res.status(400).json({ message: "Already following this user." });
+    }
+
+    // Create follow
+    await createFollow(followerId, followingId);
+
+    // Update counts
+    await updateUser(followerId, { followingCount: { increment: 1 } });
+    await updateUser(followingId, { followersCount: { increment: 1 } });
+
+    return res.json({ success: true, message: "Followed user successfully." });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error." });
+  }
 };
