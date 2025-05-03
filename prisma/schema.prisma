@@ -32,37 +32,54 @@ model User {
   country        String?
 
   events Event[]
-  // joinedEvents JoinEvent[]
+}
+
+model EventCategory {
+  id           Int     @id @default(autoincrement())
+  categoryName String? @db.VarChar(800)
+  count        Int?
+
+  events Event[]
+
+  @@map("Event_Cateory") // Corrected typo in table name
 }
 
 model Event {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String
-  location    String
-  date        DateTime
-  creatorId   Int
-  creator     User     @relation(fields: [creatorId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                         Int       @id @default(autoincrement()) // EventId
+  title                      String
+  eventCategory              String?
+  eventName                  String?
+  eventDescription           String?  @db.Text
+  logo                       String?
+  banner                     String?
+  eventStartDate             DateTime?
+  eventEndDate               DateTime?
+  isPrivateEvent             Boolean? @default(false)
+  address1                   String?  @db.Text
+  address2                   String?  @db.Text
+  city                       String?
+  state                      String?
+  country                    String?
+  zipCode                    String?
+  hostOrganizationName       String?
+  hostOrganizationDescription String?  @db.Text
+  hostWebsiteUrl             String?
+  eventUrl                   String?
+  isActive                   Boolean? @default(true)
+  isPublished                Boolean? @default(false)
+  isFreeEvent                Boolean? @default(false)
+  markDelete                 Boolean? @default(false)
+  dateTimeCreated            DateTime? @default(now())
+  createdBy                  Int?
+  dateTimeModified           DateTime? @updatedAt
+  modifiedBy                 Int?
+  sponsorLogoPath            String?
 
-  // attendees JoinEvent[]
+  // Relations
+  creatorId     Int
+  creator       User          @relation(fields: [creatorId], references: [id])
+  categoryId    Int?
+  category      EventCategory? @relation(fields: [categoryId], references: [id])
 
-  @@unique([title, date])
+
 }
-
-// model JoinEvent {
-//   id        Int      @id @default(autoincrement())
-//   userId    Int
-//   eventId   Int
-//   createdAt DateTime @default(now())
-
-//   // Relation to User (User model)
-//   user User @relation(fields: [userId], references: [id])
-
-//   // Relation to Event
-//   event Event @relation(fields: [eventId], references: [id])
-
-//   // Unique constraint to prevent duplicate joins
-//   @@unique([userId, eventId]) // Ensure user can't join the same event more than once
-// }

@@ -2,18 +2,18 @@ const prisma = require("../config/prisma");
 
 const createEvent = async (data) => {
   try {
-    const existingEvent = await prisma.event.findUnique({
-      where: {
-        title_date: {
-          title: data.title,
-          date: data.date,
-        },
-      },
-    });
+    // const existingEvent = await prisma.event.findUnique({
+    //   where: {
+    //     title_date: {
+    //       title: data.title,
+    //       date: data.date,
+    //     },
+    //   },
+    // });
 
-    if (existingEvent) {
-      throw new Error("Event with this title and date already exists.");
-    }
+    // if (existingEvent) {
+    //   throw new Error("Event with this title and date already exists.");
+    // }
 
     const event = await prisma.event.create({ data });
     return event;
