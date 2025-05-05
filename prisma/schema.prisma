@@ -4,8 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  url       = env("LOCAL_DATABASE_URL")
 }
 
 model User {
@@ -30,8 +29,14 @@ model User {
   phoneExtension String?
   language       String?
   country        String?
+  followersCount Int       @default(0)
+  followingCount Int       @default(0)
+  reports          Report[]  @relation("UserReports")
 
   events Event[]
+// joinedEvents JoinEvent[]
+  followers      Follow[]  @relation("followers")
+  following      Follow[]  @relation("following")
 }
 
 model EventCategory {
@@ -40,8 +45,8 @@ model EventCategory {
   count        Int?
 
   events Event[]
-
   @@map("Event_Cateory") // Corrected typo in table name
+
 }
 
 model Event {
@@ -83,3 +88,44 @@ model Event {
 
 
 }
+
+model Follow {
+  id           Int      @id @default(autoincrement())
+  follower     User     @relation("following", fields: [followerId], references: [id])
+  followerId   Int
+  following    User     @relation("followers", fields: [followingId], references: [id])
+  followingId  Int
+  createdAt    DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+// model JoinEvent {
+//   id        Int      @id @default(autoincrement())
+//   userId    Int
+//   eventId   Int
+//   createdAt DateTime @default(now())
+
+//   // Relation to User (User model)
+//   user User @relation(fields: [userId], references: [id])
+
+//   // Relation to Event
+//   event Event @relation(fields: [eventId], references: [id])
+
+//   // Unique constraint to prevent duplicate joins
+//   @@unique([userId, eventId]) // Ensure user can't join the same event more than once
+// }
+
+model Report {
+  id                String   @id @default(uuid())
+  reporterId        Int
+  reportedItemId    Int
+  reportedItemType  String   // "user", "event", "community", "post", "comment"
+  reason            String
+  status            String   @default("pending") // "pending", "reviewed", "resolved"
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  reporter          User     @relation("UserReports", fields: [reporterId], references: [id])
+}
+
