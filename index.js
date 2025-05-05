@@ -5,6 +5,7 @@ const morgan = require("morgan");
 const authRoutes = require("./src/routes/auth.route");
 const eventApiRoutes = require("./src/routes/eventApi.routes");
 const userRoutes = require("./src/routes/user.routes");
+const eventCategoryRoutes = require("./src/routes/eventCategory.route");
 
 const app = express();
 
@@ -17,6 +18,8 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/events", eventApiRoutes);
+app.use("/api/category", eventCategoryRoutes);
+
 
 // Health check route
 app.get("/", (req, res) => {
@@ -31,9 +34,12 @@ app.use((req, res) => {
 // Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ 
+  res.status(500).json({
     message: "Something went wrong!",
-    error: process.env.NODE_ENV === "development" ? err.message : "Internal server error"
+    error:
+      process.env.NODE_ENV === "development"
+        ? err.message
+        : "Internal server error",
   });
 });
 

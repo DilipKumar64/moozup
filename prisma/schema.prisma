@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url       = env("LOCAL_DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -31,12 +31,18 @@ model User {
   country        String?
   followersCount Int       @default(0)
   followingCount Int       @default(0)
-  reports          Report[]  @relation("UserReports")
+  reports        Report[]  @relation("UserReports")
 
-  events Event[]
-// joinedEvents JoinEvent[]
-  followers      Follow[]  @relation("followers")
-  following      Follow[]  @relation("following")
+  events         Event[]
+  // joinedEvents JoinEvent[]
+  followers      Follow[]        @relation("followers")
+  following      Follow[]        @relation("following")
+  // Relations
+  eventAttendees EventAttendee[] // Events joined
+  createdEvents  Event[]         @relation("CreatedEvents") // Events created
+  EventReport    EventReport[]
+  EventRSVP      EventRSVP[]
+  EventInvite    EventInvite[]
 }
 
 model EventCategory {
@@ -45,57 +51,104 @@ model EventCategory {
   count        Int?
 
   events Event[]
-  @@map("Event_Cateory") // Corrected typo in table name
 
+  @@map("Event_Cateory") // Corrected typo in table name
 }
 
 model Event {
-  id                         Int       @id @default(autoincrement()) // EventId
-  title                      String
-  eventCategory              String?
-  eventName                  String?
-  eventDescription           String?  @db.Text
-  logo                       String?
-  banner                     String?
-  eventStartDate             DateTime?
-  eventEndDate               DateTime?
-  isPrivateEvent             Boolean? @default(false)
-  address1                   String?  @db.Text
-  address2                   String?  @db.Text
-  city                       String?
-  state                      String?
-  country                    String?
-  zipCode                    String?
-  hostOrganizationName       String?
-  hostOrganizationDescription String?  @db.Text
-  hostWebsiteUrl             String?
-  eventUrl                   String?
-  isActive                   Boolean? @default(true)
-  isPublished                Boolean? @default(false)
-  isFreeEvent                Boolean? @default(false)
-  markDelete                 Boolean? @default(false)
-  dateTimeCreated            DateTime? @default(now())
-  createdBy                  Int?
-  dateTimeModified           DateTime? @updatedAt
-  modifiedBy                 Int?
-  sponsorLogoPath            String?
+  id                          Int       @id @default(autoincrement())
+  title                       String
+  eventCategory               String?
+  eventName                   String?
+  eventDescription            String?   @db.Text
+  logo                        String?
+  banner                      String?
+  eventStartDate              DateTime?
+  eventEndDate                DateTime?
+  isPrivateEvent              Boolean?  @default(false)
+  address1                    String?   @db.Text
+  address2                    String?   @db.Text
+  city                        String?
+  state                       String?
+  country                     String?
+  zipCode                     String?
+  hostOrganizationName        String?
+  hostOrganizationDescription String?   @db.Text
+  hostWebsiteUrl              String?
+  eventUrl                    String?
+  isActive                    Boolean?  @default(true)
+  isPublished                 Boolean?  @default(false)
+  isFreeEvent                 Boolean?  @default(false)
+  markDelete                  Boolean?  @default(false)
+  dateTimeCreated             DateTime? @default(now())
+  createdBy                   Int?
+  dateTimeModified            DateTime? @updatedAt
+  modifiedBy                  Int?
+  sponsorLogoPath             String?
 
   // Relations
-  creatorId     Int
-  creator       User          @relation(fields: [creatorId], references: [id])
-  categoryId    Int?
-  category      EventCategory? @relation(fields: [categoryId], references: [id])
+  creatorId      Int
+  creator        User            @relation("CreatedEvents", fields: [creatorId], references: [id])
+  categoryId     Int?
+  category       EventCategory?  @relation(fields: [categoryId], references: [id])
+  eventAttendees EventAttendee[] // Users who joined
+  EventReport    EventReport[]
+  EventRSVP      EventRSVP[]
+  EventInvite    EventInvite[]
+  User           User?           @relation(fields: [userId], references: [id])
+  userId         Int?
+}
 
+model EventAttendee {
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
 
+  event   Event @relation(fields: [eventId], references: [id])
+  eventId Int
+
+  @@unique([userId, eventId]) // to prevent duplicate joins
+}
+
+model EventReport {
+  id        Int      @id @default(autoincrement())
+  eventId   Int
+  userId    Int
+  reason    String
+  createdAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+}
+
+model EventRSVP {
+  id        Int      @id @default(autoincrement())
+  eventId   Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId]) // Prevent duplicate RSVP
+}
+
+model EventInvite {
+  id           Int      @id @default(autoincrement())
+  eventId      Int
+  inviterId    Int
+  inviteeEmail String
+  event        Event    @relation(fields: [eventId], references: [id])
+  inviter      User     @relation(fields: [inviterId], references: [id])
+  createdAt    DateTime @default(now())
 }
 
 model Follow {
-  id           Int      @id @default(autoincrement())
-  follower     User     @relation("following", fields: [followerId], references: [id])
-  followerId   Int
-  following    User     @relation("followers", fields: [followingId], references: [id])
-  followingId  Int
-  createdAt    DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  follower    User     @relation("following", fields: [followerId], references: [id])
+  followerId  Int
+  following   User     @relation("followers", fields: [followingId], references: [id])
+  followingId Int
+  createdAt   DateTime @default(now())
 
   @@unique([followerId, followingId])
 }
@@ -117,15 +170,14 @@ model Follow {
 // }
 
 model Report {
-  id                String   @id @default(uuid())
-  reporterId        Int
-  reportedItemId    Int
-  reportedItemType  String   // "user", "event", "community", "post", "comment"
-  reason            String
-  status            String   @default("pending") // "pending", "reviewed", "resolved"
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               String   @id @default(uuid())
+  reporterId       Int
+  reportedItemId   Int
+  reportedItemType String // "user", "event", "community", "post", "comment"
+  reason           String
+  status           String   @default("pending") // "pending", "reviewed", "resolved"
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  reporter          User     @relation("UserReports", fields: [reporterId], references: [id])
+  reporter User @relation("UserReports", fields: [reporterId], references: [id])
 }
-
