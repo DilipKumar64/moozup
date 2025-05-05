@@ -24,15 +24,15 @@ router.delete("/delete/:id", authLimiter, authenticateJWT, userController.delete
 router.post("/follow/:id", authLimiter, authenticateJWT, userController.followUser);
 
 //Unfollow another user
-// router.post("/unfollow/:id", authLimiter, authenticateJWT, userController.unfollowUser);
+router.post("/unfollow/:id", authLimiter, authenticateJWT, userController.unfollowUser);
 
 // /List user’s followers
-// router.get("/followers", authLimiter, authenticateJWT, userController.getFollowers);
+router.get("/followers", authLimiter, authenticateJWT, userController.getFollowers);
 
 //List users followed by the user
-// router.get("/following", authLimiter, authenticateJWT, userController.getFollowing);
+router.get("/following", authLimiter, authenticateJWT, userController.getFollowing);
 
 //Report a user
-// router.post("/report/:id", authLimiter, authenticateJWT, userController.reportUser);
+router.post("/report/:id", authLimiter, authenticateJWT, userController.reportUser);
 
 module.exports = router;

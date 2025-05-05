@@ -1,5 +1,6 @@
 const { findUserById, updateUser, deleteUser } = require('../models/userModels');
-const { createFollow, findFollow, countFollowers, countFollowing } = require('../models/follow.model');
+const { createFollow, findFollow, countFollowers, countFollowing, deleteFollow, getFollowers, getFollowing } = require('../models/follow.model');
+const { createReport } = require('../models/report.model');
 
 const isIdValid = (id) => {
     return !isNaN(parseInt(id)) && parseInt(id) > 0;
@@ -158,5 +159,106 @@ exports.followUser = async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+exports.unfollowUser = async (req, res) => {
+  const followerId = req.user.id; // from JWT
+  const followingId = parseInt(req.params.id);
+
+  if (followerId === followingId) {
+    return res.status(400).json({ message: "You cannot unfollow yourself." });
+  }
+
+  try {
+    // Check if following relationship exists
+    const existing = await findFollow(followerId, followingId);
+    if (!existing) {
+      return res.status(400).json({ message: "You are not following this user." });
+    }
+
+    // Remove follow relationship
+    await deleteFollow(followerId, followingId)
+    // Update counts
+    await updateUser(followerId, { followingCount: { increment: -1 } });
+    await updateUser(followingId, { followersCount: { increment: -1 } });
+
+    return res.json({ success: true, message: "Unfollowed user successfully." });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+exports.getFollowers = async (req, res) => {
+  const userId = req.user.id; // Get current user from JWT
+
+  try {
+    const followers = await getFollowers(userId);
+
+    // Remove sensitive info (like password) from each follower
+    const followersList = followers.map(f => {
+      const { password, ...userWithoutPassword } = f.follower;
+      return userWithoutPassword;
+    });
+
+    res.status(200).json({
+      message: "Followers retrieved successfully",
+      followers: followersList,
+    });
+  } catch (error) {
+    console.error("Get followers error:", error);
+    res.status(500).json({ message: "Something went wrong", error: error.message });
+  }
+};
+
+exports.getFollowing = async (req, res) => {
+  const userId = req.user.id; // Get current user from JWT
+
+  try {
+    const following = await getFollowing(userId);
+
+    // Remove sensitive info (like password) from each followed user
+    const followingList = following.map(f => {
+      const { password, ...userWithoutPassword } = f.following;
+      return userWithoutPassword;
+    });
+
+    res.status(200).json({
+      message: "Following users retrieved successfully",
+      following: followingList,
+    });
+  } catch (error) {
+    console.error("Get following error:", error);
+    res.status(500).json({ message: "Something went wrong", error: error.message });
+  }
+};
+
+exports.reportUser = async (req, res) => {
+  const reporterId = req.user.id; // from JWT
+  const reportedUserId = parseInt(req.params.id);
+  const { reason } = req.body;
+
+  if (reporterId === reportedUserId) {
+    return res.status(400).json({ message: "You cannot report yourself." });
+  }
+
+  if (!reason || reason.trim() === "") {
+    return res.status(400).json({ message: "Reason for report is required." });
+  }
+
+  try {
+    await createReport({
+      reporterId,
+      reportedItemId: reportedUserId,
+      reportedItemType: "user",
+      reason,
+      status: "pending",
+    });
+
+    res.status(201).json({ message: "User reported successfully." });
+  } catch (error) {
+    console.error("Report user error:", error);
+    res.status(500).json({ message: "Something went wrong", error: error.message });
   }
 };
