@@ -12,7 +12,8 @@ router.post('/login', authLimiter, userController.login);
 // Logout route
 router.post('/logout', userController.logout); // Using the logout method from userController
 
-router.post("/refresh-token", authLimiter, authenticateJWT, userController.refreshToken);  
+// Refresh token route (no authentication required)
+router.post("/refresh-token", authLimiter, userController.refreshToken);  
 
 // Password reset route (protected)
 router.post('/reset-password/:userId', authLimiter, authenticateJWT, userController.resetPassword);

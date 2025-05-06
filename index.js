@@ -6,6 +6,7 @@ const authRoutes = require("./src/routes/auth.route");
 const eventApiRoutes = require("./src/routes/eventApi.routes");
 const userRoutes = require("./src/routes/user.routes");
 const eventCategoryRoutes = require("./src/routes/eventCategory.route");
+const directoryRoutes = require("./src/routes/directory.routes");
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/events", eventApiRoutes);
 app.use("/api/category", eventCategoryRoutes);
+app.use("/api/directory", directoryRoutes)
 
 
 // Health check route

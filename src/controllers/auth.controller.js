@@ -1,6 +1,6 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { findUserByEmail, createUser, findUserById, updateUser, deleteUser, updateUserPassword } = require("../models/userModels");
+const { findUserByEmail, createUser, findUserById, updateUser, deleteUser, updateUserPassword } = require("../models/user.models");
 const { sendWelcomeEmail, sendPasswordResetEmail } = require("../utils/mailer");
 require("dotenv").config();
 
@@ -78,13 +78,13 @@ exports.login = async (req, res) => {
     const accessToken = jwt.sign(
       { id: user.id, email: user.email },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "365d" }
     );
     
     const refreshToken = jwt.sign(
       { id: user.id, email: user.email },
       process.env.REFRESH_TOKEN_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "365d" }
     );
 
     res.status(200).json({

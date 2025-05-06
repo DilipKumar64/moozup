@@ -97,6 +97,9 @@ model Event {
   EventInvite    EventInvite[]
   User           User?           @relation(fields: [userId], references: [id])
   userId         Int?
+  participationTypes ParticipationType[] // Added relation for participation types
+  sponsorTypes   SponsorType[]   // Added relation for sponsor types
+  exhibitorTypes ExhibitorType[] // Added relation for exhibitor types
 }
 
 model EventAttendee {
@@ -180,4 +183,45 @@ model Report {
   updatedAt        DateTime @updatedAt
 
   reporter User @relation("UserReports", fields: [reporterId], references: [id])
+}
+
+model ParticipationType {
+  id                    Int      @id @default(autoincrement())
+  personParticipationType String
+  groupParticipationName String
+  priority              Int      @default(0)
+  isVisibleInApp        Boolean  @default(true)
+  isAllowedInEvent      Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relation to Event
+  eventId               Int
+  event                 Event    @relation(fields: [eventId], references: [id])
+}
+
+model SponsorType {
+  id        Int      @id @default(autoincrement())
+  type      String
+  priority  Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relation to Event
+  eventId   Int
+  event     Event    @relation(fields: [eventId], references: [id])
+}
+
+model ExhibitorType {
+  id        Int      @id @default(autoincrement())
+  type      String
+  priority  Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relation to Event
+  eventId   Int
+  event     Event    @relation(fields: [eventId], references: [id])
 }

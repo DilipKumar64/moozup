@@ -1,4 +1,4 @@
-const { findUserById, updateUser, deleteUser } = require('../models/userModels');
+const { findUserById, updateUser, deleteUser } = require('../models/user.models');
 const { createFollow, findFollow, countFollowers, countFollowing, deleteFollow, getFollowers, getFollowing } = require('../models/follow.model');
 const { createReport } = require('../models/report.model');
 
