@@ -7,6 +7,7 @@ const eventApiRoutes = require("./src/routes/eventApi.routes");
 const userRoutes = require("./src/routes/user.routes");
 const eventCategoryRoutes = require("./src/routes/eventCategory.route");
 const directoryRoutes = require("./src/routes/directory.routes");
+const agendaRoures = require("./src/routes/agenda.route");
 
 const app = express();
 
@@ -20,8 +21,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/events", eventApiRoutes);
 app.use("/api/category", eventCategoryRoutes);
-app.use("/api/directory", directoryRoutes)
-
+app.use("/api/directory", directoryRoutes);
+app.use("/api/agenda", agendaRoures);
 
 // Health check route
 app.get("/", (req, res) => {
