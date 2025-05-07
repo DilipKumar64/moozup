@@ -24,6 +24,10 @@ const findEventById = (id) => {
 
 // Update event by ID
 const updateEventById = (id, data) => {
+
+  if (data.creatorId) data.creatorId = Number(data.creatorId);
+  if (data.categoryId) data.categoryId = Number(data.categoryId);
+  if (data.userId) data.userId = Number(data.userId);
   return prisma.event.update({
     where: { id: Number(id) },
     data: data,

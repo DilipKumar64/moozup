@@ -1,3 +1,4 @@
+const { deleteFromSupabase } = require("../utils/supabaseImageUtils"); // image delete helper
 const prisma = require("../config/prisma");
 const {
   createEvent,
@@ -12,120 +13,101 @@ const {
   rsvpToEvent,
   getAttendees,
 } = require("../models/eventModel"); // Import model function
+const uploadToSupabase = require("../utils/uploadToSupabase");
 
 // Create Event
 exports.createEvent = async (req, res) => {
-  const {
-    title,
-    eventCategory,
-    eventName,
-    eventDescription,
-    logo,
-    banner,
-    eventStartDate,
-    eventEndDate,
-    isPrivateEvent,
-    address1,
-    address2,
-    city,
-    state,
-    country,
-    zipCode,
-    hostOrganizationName,
-    hostOrganizationDescription,
-    hostWebsiteUrl,
-    eventUrl,
-    isActive,
-    isPublished,
-    isFreeEvent,
-    markDelete,
-    sponsorLogoPath,
-    creatorId,
-  } = req.body;
-
-  // Input validation
-  if (
-    !title ||
-    !eventCategory ||
-    !eventName ||
-    !eventDescription ||
-    !creatorId ||
-    !eventStartDate ||
-    !eventEndDate ||
-    !address1 ||
-    !city ||
-    !state ||
-    !country ||
-    !zipCode ||
-    !hostOrganizationName ||
-    !eventUrl ||
-    !logo ||
-    !banner ||
-    !hostOrganizationDescription ||
-    !hostWebsiteUrl ||
-    !isPrivateEvent ||
-    !isActive ||
-    !isPublished ||
-    !isFreeEvent ||
-    !markDelete ||
-    !sponsorLogoPath
-  ) {
-    return res.status(400).json({ message: "All required fields are missing" });
-  }
-
-  // Convert creatorId to an integer
-  const parsedCreatorId = Number(creatorId); // Convert to integer
-
-  // Check if creatorId is valid
-  if (isNaN(parsedCreatorId)) {
-    return res.status(400).json({ message: "Invalid creatorId" });
-  }
-
   try {
-    // Create the event using Prisma ORM
-    const newEvent = await createEvent({
-      title,
-      eventCategory,
+    const {
       eventName,
       eventDescription,
+      eventStartDate,
+      eventEndDate,
+      startTime,
+      endTime,
+      eventLocation,
+      moozupWebsite,
+      eventWebsite,
+      facebookId,
+      facebookPageUrl,
+      twitterId,
+      twitterPageUrl,
+      twitterHashtag,
+      linkedInPageUrl,
+      meraEventsId,
+      ticketWidget,
+      streamUrl,
       logo,
       banner,
-      eventStartDate: new Date(eventStartDate), // Ensure date is in correct format
-      eventEndDate: new Date(eventEndDate), // Ensure date is in correct format
-      isPrivateEvent: isPrivateEvent || false,
-      address1,
-      address2,
-      city,
-      state,
-      country,
-      zipCode,
-      hostOrganizationName,
-      hostOrganizationDescription,
-      hostWebsiteUrl,
-      eventUrl,
-      isActive: isActive || true,
-      isPublished: isPublished || false,
-      isFreeEvent: isFreeEvent || false,
-      markDelete: markDelete || false,
-      dateTimeCreated: new Date(),
-      createdBy: parsedCreatorId,
-      dateTimeModified: new Date(),
-      modifiedBy: parsedCreatorId,
-      sponsorLogoPath,
-      creatorId: parsedCreatorId, // Use parsed creatorId
+      creatorId,
+      categoryId, // Optional
+    } = req.body;
+
+    // ✅ Required Field Validation
+    if (
+      !eventName ||
+      !eventDescription ||
+      !eventStartDate ||
+      !eventEndDate ||
+      !startTime ||
+      !endTime ||
+      !eventLocation ||
+      !moozupWebsite ||
+      !eventWebsite ||
+      !facebookId ||
+      !facebookPageUrl ||
+      !twitterId ||
+      !twitterPageUrl ||
+      !twitterHashtag ||
+      !linkedInPageUrl ||
+      !meraEventsId ||
+      !ticketWidget ||
+      !streamUrl ||
+      !creatorId
+    ) {
+      return res.status(400).json({
+        message: "All required fields must be provided.",
+      });
+    }
+
+    const logoUrl = await uploadToSupabase(req.files.logo[0], "logos");
+    const bannerUrl = await uploadToSupabase(req.files.banner[0], "banners");
+
+    const newEvent = await createEvent({
+      eventName,
+      eventDescription,
+      eventStartDate: new Date(eventStartDate),
+      eventEndDate: new Date(eventEndDate),
+      startTime,
+      endTime,
+      eventLocation,
+      moozupWebsite,
+      eventWebsite,
+      facebookId,
+      facebookPageUrl,
+      twitterId,
+      twitterPageUrl,
+      twitterHashtag,
+      linkedInPageUrl,
+      meraEventsId,
+      ticketWidget,
+      streamUrl,
+      logo: logoUrl,
+      banner: bannerUrl,
+      creatorId: Number(creatorId),
+      categoryId: categoryId ? Number(categoryId) : undefined,
     });
 
-    // Return success response with created event
-    res.status(201).json({
+    return res.status(201).json({
       message: "Event created successfully",
       event: newEvent,
     });
   } catch (error) {
-    // Error handling
     console.error("Error creating event:", error);
-    res
-      .status(500)
-      .json({ message: "Something went wrong", error: error.message });
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
   }
 };
 
@@ -160,40 +142,98 @@ exports.getEventDetails = async (req, res) => {
   }
 };
 
-// Update Event
 exports.updateEvent = async (req, res) => {
   const { id } = req.params;
   const updatedData = req.body;
+  const { logo, banner } = req.files; // Get uploaded files
 
-  // ✅ Fix: Convert string to Date object if date exists
-  if (updatedData.date) {
-    updatedData.date = new Date(updatedData.date);
+  // ✅ Fix: Convert strings to Date objects
+  if (updatedData.eventStartDate) {
+    updatedData.eventStartDate = new Date(updatedData.eventStartDate);
+  }
+
+  if (updatedData.eventEndDate) {
+    updatedData.eventEndDate = new Date(updatedData.eventEndDate);
   }
 
   try {
+    // Fetch existing event to get the current logo/banner URLs
+    const existingEvent = await findEventById(id);
+
+    let logoUrl = existingEvent.logo;
+    let bannerUrl = existingEvent.banner;
+
+    // If a new logo is uploaded, upload it and delete the old one
+    if (logo) {
+      logoUrl = await uploadToSupabase(
+        logo[0],
+        "event-logos",
+        existingEvent.logo
+      ); // Pass the old logo URL for deletion
+    }
+
+    // If a new banner is uploaded, upload it and delete the old one
+    if (banner) {
+      bannerUrl = await uploadToSupabase(
+        banner[0],
+        "event-banners",
+        existingEvent.banner
+      ); // Pass the old banner URL for deletion
+    }
+
+    // Now, update the event with new logo/banner URLs and other data
+    updatedData.logo = logoUrl;
+    updatedData.banner = bannerUrl;
+
+    // Update event in the database
     const updatedEvent = await updateEventById(id, updatedData);
+
     res.status(200).json({
       message: "Event updated successfully",
       event: updatedEvent,
     });
   } catch (error) {
     console.error("Error updating event:", error);
-    res.status(500).json({ message: "Error updating event" });
+    res
+      .status(500)
+      .json({ message: "Error updating event", error: error.message });
   }
 };
 
 // Delete Event
+
 exports.deleteEvent = async (req, res) => {
   const { id } = req.params;
+
   try {
+    // 1. Get existing event to fetch logo and banner URLs
+    const existingEvent = await findEventById(id);
+
+    if (!existingEvent) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // 2. Delete logo and banner from Supabase
+    if (existingEvent.logo) {
+      await deleteFromSupabase(existingEvent.logo);
+    }
+
+    if (existingEvent.banner) {
+      await deleteFromSupabase(existingEvent.banner);
+    }
+
+    // 3. Now delete the event from database
     const deletedEvent = await deleteEventById(id);
+
     res.status(200).json({
-      message: "Event deleted successfully",
+      message: "Event and images deleted successfully",
       event: deletedEvent,
     });
   } catch (error) {
     console.error("Error deleting event:", error);
-    res.status(500).json({ message: "Error deleting event" });
+    res
+      .status(500)
+      .json({ message: "Error deleting event", error: error.message });
   }
 };
 
