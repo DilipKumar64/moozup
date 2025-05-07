@@ -58,35 +58,27 @@ model EventCategory {
 }
 
 model Event {
-  id                          Int       @id @default(autoincrement())
-  title                       String
-  eventCategory               String?
-  eventName                   String?
-  eventDescription            String?   @db.Text
-  logo                        String?
-  banner                      String?
-  eventStartDate              DateTime?
-  eventEndDate                DateTime?
-  isPrivateEvent              Boolean?  @default(false)
-  address1                    String?   @db.Text
-  address2                    String?   @db.Text
-  city                        String?
-  state                       String?
-  country                     String?
-  zipCode                     String?
-  hostOrganizationName        String?
-  hostOrganizationDescription String?   @db.Text
-  hostWebsiteUrl              String?
-  eventUrl                    String?
-  isActive                    Boolean?  @default(true)
-  isPublished                 Boolean?  @default(false)
-  isFreeEvent                 Boolean?  @default(false)
-  markDelete                  Boolean?  @default(false)
-  dateTimeCreated             DateTime? @default(now())
-  createdBy                   Int?
-  dateTimeModified            DateTime? @updatedAt
-  modifiedBy                  Int?
-  sponsorLogoPath             String?
+  id               Int      @id @default(autoincrement())
+  eventName        String
+  eventDescription String?  @db.Text
+  eventStartDate   DateTime
+  eventEndDate     DateTime
+  startTime        String?
+  endTime          String?
+  eventLocation    String?
+  moozupWebsite    String?
+  eventWebsite     String?
+  facebookId       String?
+  facebookPageUrl  String?
+  twitterId        String?
+  twitterPageUrl   String?
+  twitterHashtag   String?
+  linkedInPageUrl  String?
+  meraEventsId     String?
+  ticketWidget     String?
+  streamUrl        String?
+  logo             String? // ✅ Added
+  banner           String? // ✅ Added
 
   // Relations
   creatorId          Int
