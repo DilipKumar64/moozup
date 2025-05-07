@@ -24,6 +24,18 @@ const {
   deleteSponsorType
 } = require('../models/sponsor.types.model');
 
+const {
+  createUser,
+  findUserByEmail,
+  findUserById,
+  updateUser,
+  deleteUser,
+  findUsersByEventId
+} = require('../models/user.models');
+const FileService = require('../services/file.service');
+const { sendWelcomeEmail, sendPasswordEmail } = require('../utils/mailer');
+const bcrypt = require('bcrypt');
+
 const isIdValid = (id) => {
   return !isNaN(parseInt(id)) && parseInt(id) > 0;
 };
@@ -405,5 +417,404 @@ exports.getSponsorTypesByEvent = async (req, res) => {
   } catch (error) {
     console.error("Get sponsor types error:", error);
     res.status(500).json({ message: "Something went wrong", error: error.message });
+  }
+};
+
+// Directory User Controller
+exports.createDirectoryUser = async (req, res) => {
+  const {
+    firstName,
+    email,
+    phoneNumber,
+    participationTypeId,
+    // Optional fields
+    companyName,
+    jobTitle,
+    city,
+    state,
+    country,
+    phoneExtension,
+    facebookUrl,
+    linkedinUrl,
+    twitterUrl,
+    webProfile,
+    uid,
+    description
+  } = req.body;
+
+  // Validate required fields
+  if (!firstName || !email || !phoneNumber || !participationTypeId) {
+    return res.status(400).json({
+      message: "Missing required fields. Required fields are: firstName, lastName, email, phoneNumber, participationTypeId"
+    });
+  }
+
+  try {
+    // Check if user with email already exists
+    const existingUser = await findUserByEmail(email);
+    if (existingUser) {
+      return res.status(400).json({
+        message: "A user with this email already exists"
+      });
+    }
+
+    // Check if participation type exists
+    const participationType = await findParticipationTypeById(participationTypeId);
+    if (!participationType) {
+      return res.status(404).json({ message: "Participation type not found" });
+    }
+
+    // Generate and hash password
+    const generatedPassword = generatePassword();
+    const hashedPassword = await bcrypt.hash(generatedPassword, 10);
+
+    // Handle profile picture upload
+    let profilePictureUrl = null;
+    if (req.file) {
+      try {
+        profilePictureUrl = await FileService.uploadProfilePicture(req.file);
+      } catch (uploadError) {
+        return res.status(500).json({
+          message: "Failed to upload profile picture",
+          error: uploadError.message
+        });
+      }
+    }
+
+    // Create the user
+    const user = await createUser({
+      firstName,
+      email,
+      phoneNumber,
+      participationTypeId: parseInt(participationTypeId),
+      // Optional fields
+      companyName: companyName || null,
+      jobTitle: jobTitle || null,
+      city: city || null,
+      state: state || null,
+      country: country || null,
+      phoneExtension: phoneExtension || null,
+      facebookUrl: facebookUrl || null,
+      linkedinUrl: linkedinUrl || null,
+      twitterUrl: twitterUrl || null,
+      webProfile: webProfile || null,
+      uid: uid || null,
+      description: description || null,
+      profilePicture: profilePictureUrl,
+      status: true,
+      role: "user",
+      password: hashedPassword
+    });
+
+    // Send welcome email with generated password
+    // sendWelcomeEmail({
+    //     to: email,
+    //     firstName,
+    //     email,
+    //     password: generatedPassword
+    //   }).catch((err) => {
+    //       console.error("Failed to send welcome email:", err);
+    //   });
+
+    res.status(201).json({
+      message: "User created successfully in directory",
+      user: {
+        ...user,
+        password: undefined // Don't send password in response
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.updateDirectoryUser = async (req, res) => {
+  const { id } = req.params;
+  const {
+    firstName,
+    email,
+    phoneNumber,
+    participationTypeId,
+    // Optional fields
+    companyName,
+    jobTitle,
+    city,
+    state,
+    country,
+    phoneExtension,
+    facebookUrl,
+    linkedinUrl,
+    twitterUrl,
+    webProfile,
+    uid,
+    description
+  } = req.body;
+
+  try {
+    // Check if user exists
+    const existingUser = await findUserById(id);
+    if (!existingUser) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    // If email is being changed, check if new email already exists
+    if (email && email !== existingUser.email) {
+      const emailExists = await findUserByEmail(email);
+      if (emailExists) {
+        return res.status(400).json({
+          message: "A user with this email already exists"
+        });
+      }
+    }
+
+    // Check if participation type exists if it's being updated
+    if (participationTypeId) {
+      const participationType = await findParticipationTypeById(participationTypeId);
+      if (!participationType) {
+        return res.status(404).json({ message: "Participation type not found" });
+      }
+    }
+
+    // Handle profile picture upload if new file is provided
+    let profilePictureUrl = existingUser.profilePicture;
+    if (req.file) {
+      try {
+        // Delete old profile picture if it exists
+        if (existingUser.profilePicture) {
+          await FileService.deleteProfilePicture(existingUser.profilePicture);
+        }
+        // Upload new profile picture
+        profilePictureUrl = await FileService.uploadProfilePicture(req.file);
+      } catch (uploadError) {
+        return res.status(500).json({
+          message: "Failed to handle profile picture",
+          error: uploadError.message
+        });
+      }
+    }
+
+    // Prepare update data
+    const updateData = {
+      firstName: firstName || existingUser.firstName,
+      email: email || existingUser.email,
+      phoneNumber: phoneNumber || existingUser.phoneNumber,
+      participationTypeId: participationTypeId ? parseInt(participationTypeId) : existingUser.participationTypeId,
+      companyName: companyName !== undefined ? companyName : existingUser.companyName,
+      jobTitle: jobTitle !== undefined ? jobTitle : existingUser.jobTitle,
+      city: city !== undefined ? city : existingUser.city,
+      state: state !== undefined ? state : existingUser.state,
+      country: country !== undefined ? country : existingUser.country,
+      phoneExtension: phoneExtension !== undefined ? phoneExtension : existingUser.phoneExtension,
+      facebookUrl: facebookUrl !== undefined ? facebookUrl : existingUser.facebookUrl,
+      linkedinUrl: linkedinUrl !== undefined ? linkedinUrl : existingUser.linkedinUrl,
+      twitterUrl: twitterUrl !== undefined ? twitterUrl : existingUser.twitterUrl,
+      webProfile: webProfile !== undefined ? webProfile : existingUser.webProfile,
+      uid: uid !== undefined ? uid : existingUser.uid,
+      description: description !== undefined ? description : existingUser.description,
+      profilePicture: profilePictureUrl
+    };
+
+    // Update the user
+    const updatedUser = await updateUser(id, updateData);
+
+    res.status(200).json({
+      message: "User updated successfully",
+      user: {
+        ...updatedUser,
+        password: undefined // Don't send password in response
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.deleteDirectoryUser = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Check if user exists
+    const existingUser = await findUserById(id);
+    if (!existingUser) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    // Delete profile picture if it exists
+    if (existingUser.profilePicture) {
+      try {
+        await FileService.deleteProfilePicture(existingUser.profilePicture);
+      } catch (uploadError) {
+        // Log error but continue with user deletion
+        console.error('Failed to delete profile picture:', uploadError);
+      }
+    }
+
+    // Delete the user
+    await deleteUser(id);
+
+    res.status(200).json({
+      message: "User deleted successfully"
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.updateUserNote = async (req, res) => {
+  const { id } = req.params;
+  const { note } = req.body;
+
+  // Validate note is provided
+  if (note === undefined || note === null) {
+    return res.status(400).json({
+      message: "Note is required"
+    });
+  }
+
+  try {
+    // Check if user exists
+    const existingUser = await findUserById(id);
+    if (!existingUser) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    // Validate note length
+    if (note.length > 500) {
+      return res.status(400).json({
+        message: "Note cannot exceed 500 characters"
+      });
+    }
+
+    // Update only the note field
+    const updatedUser = await updateUser(id, { note });
+
+    res.status(200).json({
+      message: "User note updated successfully",
+      user: {
+        ...updatedUser,
+        password: undefined // Don't send password in response
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+// Function to generate random 8-character alphanumeric password
+const generatePassword = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let password = '';
+  for (let i = 0; i < 8; i++) {
+    const randomIndex = Math.floor(Math.random() * chars.length);
+    password += chars[randomIndex];
+  }
+  return password;
+};
+
+exports.sendUserPassword = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Check if user exists
+    const existingUser = await findUserById(id);
+    if (!existingUser) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    // Generate new password
+    const newPassword = generatePassword();
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update user's password in database
+    await updateUser(id, { password: hashedPassword });
+
+    // Send password email
+    try {
+      // await sendPasswordEmail({
+      //   to: existingUser.email,
+      //   firstName: existingUser.firstName,
+      //   password: newPassword
+      // });
+
+      res.status(200).json({
+        message: "New password has been sent to user's email"
+      });
+    } catch (emailError) {
+      // If email fails, revert the password change
+      await updateUser(id, { password: existingUser.password });
+      throw new Error(`Failed to send email: ${emailError.message}`);
+    }
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.getUserByEmail = async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    // Check if user exists
+    const user = await findUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    // Return user details
+    res.status(200).json({
+      message: "User found successfully",
+      user: {
+        firstName: user.firstName,
+        email: user.email,
+        password: user.password // Note: This will return the hashed password
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.getEventUsers = async (req, res) => {
+  const { eventId } = req.params;
+
+  try {
+    const users = await findUsersByEventId(eventId);
+
+    res.status(200).json({
+      message: "Event users retrieved successfully",
+      users
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
   }
 };

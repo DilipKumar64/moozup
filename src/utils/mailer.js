@@ -42,3 +42,21 @@ exports.sendPasswordResetEmail = async ({ to, firstName, newPassword }) => {
 
   return transporter.sendMail(mailOptions);
 };
+
+exports.sendPasswordEmail = async ({ to, firstName, password }) => {
+  const mailOptions = {
+    from: `"Moozup" <${process.env.SMTP_USER}>`,
+    to,
+    subject: "Your Password - Moozup",
+    html: `
+      <h2>Your Password Information</h2>
+      <p>Hello ${firstName},</p>
+      <p>Here is your password for your Moozup account:</p>
+      <p>Your password is: <strong>${password}</strong></p>
+      <p>Please keep this information secure and do not share it with anyone.</p>
+      <p>If you need to reset your password, please use the password reset feature.</p>
+    `,
+  };
+
+  return transporter.sendMail(mailOptions);
+};

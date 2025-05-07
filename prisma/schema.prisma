@@ -32,6 +32,19 @@ model User {
   followersCount Int       @default(0)
   followingCount Int       @default(0)
   reports        Report[]  @relation("UserReports")
+  
+  // New fields addd when creating add people in directory
+  companyName    String?
+  jobTitle       String?
+  facebookUrl    String?
+  linkedinUrl    String?
+  twitterUrl     String?
+  webProfile     String?
+  uid            String?   //@unique see later
+  description    String?   @db.Text
+  note           String?   @db.VarChar(500)
+  participationTypeId Int?
+  participationType ParticipationType? @relation(fields: [participationTypeId], references: [id])
 
   events         Event[]
   // joinedEvents JoinEvent[]
@@ -198,6 +211,9 @@ model ParticipationType {
   // Relation to Event
   eventId               Int
   event                 Event    @relation(fields: [eventId], references: [id])
+  
+  // Relation to User
+  users                 User[]
 }
 
 model SponsorType {

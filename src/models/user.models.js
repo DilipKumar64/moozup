@@ -18,11 +18,39 @@ const updateUserPassword = async (userId, hashedPassword) => {
   });
 };
 
+const findUsersByEventId = (eventId) => prisma.user.findMany({
+  where: {
+    participationType: {
+      eventId: parseInt(eventId)
+    }
+  },
+  select: {
+    id: true,
+    firstName: true,
+    lastName: true,
+    email: true,
+    phoneNumber: true,
+    companyName: true,
+    jobTitle: true,
+    profilePicture: true,
+    facebookUrl: true,
+    twitterUrl: true,
+    linkedinUrl: true,
+    participationType: {
+      select: {
+        personParticipationType: true,
+        groupParticipationName: true
+      }
+    }
+  }
+});
+
 module.exports = {
   createUser,
   findUserByEmail,
   findUserById,
   updateUser,
   deleteUser,
-  updateUserPassword
+  updateUserPassword,
+  findUsersByEventId
 };
