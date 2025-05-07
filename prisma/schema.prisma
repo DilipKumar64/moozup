@@ -43,6 +43,8 @@ model User {
   EventReport    EventReport[]
   EventRSVP      EventRSVP[]
   EventInvite    EventInvite[]
+
+  Session Session[]
 }
 
 model EventCategory {
@@ -87,19 +89,23 @@ model Event {
   sponsorLogoPath             String?
 
   // Relations
-  creatorId      Int
-  creator        User            @relation("CreatedEvents", fields: [creatorId], references: [id])
-  categoryId     Int?
-  category       EventCategory?  @relation(fields: [categoryId], references: [id])
-  eventAttendees EventAttendee[] // Users who joined
-  EventReport    EventReport[]
-  EventRSVP      EventRSVP[]
-  EventInvite    EventInvite[]
-  User           User?           @relation(fields: [userId], references: [id])
-  userId         Int?
+  creatorId          Int
+  creator            User                @relation("CreatedEvents", fields: [creatorId], references: [id])
+  categoryId         Int?
+  category           EventCategory?      @relation(fields: [categoryId], references: [id])
+  eventAttendees     EventAttendee[] // Users who joined
+  EventReport        EventReport[]
+  EventRSVP          EventRSVP[]
+  EventInvite        EventInvite[]
+  User               User?               @relation(fields: [userId], references: [id])
+  userId             Int?
   participationTypes ParticipationType[] // Added relation for participation types
-  sponsorTypes   SponsorType[]   // Added relation for sponsor types
-  exhibitorTypes ExhibitorType[] // Added relation for exhibitor types
+  sponsorTypes       SponsorType[] // Added relation for sponsor types
+  exhibitorTypes     ExhibitorType[] // Added relation for exhibitor types
+  SessionType        SessionType[] // Added relation for session types
+  Session            Session[]
+  AwardType          AwardType[]
+  AwardedPerson      AwardedPerson[]
 }
 
 model EventAttendee {
@@ -186,18 +192,19 @@ model Report {
 }
 
 model ParticipationType {
-  id                    Int      @id @default(autoincrement())
+  id                      Int      @id @default(autoincrement())
   personParticipationType String
-  groupParticipationName String
-  priority              Int      @default(0)
-  isVisibleInApp        Boolean  @default(true)
-  isAllowedInEvent      Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  groupParticipationName  String
+  priority                Int      @default(0)
+  isVisibleInApp          Boolean  @default(true)
+  isAllowedInEvent        Boolean  @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   // Relation to Event
-  eventId               Int
-  event                 Event    @relation(fields: [eventId], references: [id])
+  eventId Int
+  event   Event     @relation(fields: [eventId], references: [id])
+  Session Session[]
 }
 
 model SponsorType {
@@ -209,8 +216,9 @@ model SponsorType {
   updatedAt DateTime @updatedAt
 
   // Relation to Event
-  eventId   Int
-  event     Event    @relation(fields: [eventId], references: [id])
+  eventId Int
+  event   Event     @relation(fields: [eventId], references: [id])
+  Session Session[]
 }
 
 model ExhibitorType {
@@ -222,6 +230,83 @@ model ExhibitorType {
   updatedAt DateTime @updatedAt
 
   // Relation to Event
-  eventId   Int
-  event     Event    @relation(fields: [eventId], references: [id])
+  eventId Int
+  event   Event @relation(fields: [eventId], references: [id])
+}
+
+model SessionType {
+  id          Int      @id @default(autoincrement())
+  sessionname String   @unique
+  color       String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relation to Event
+  eventId Int
+  event   Event     @relation(fields: [eventId], references: [id])
+  Session Session[]
+}
+
+model Session {
+  id             Int      @id @default(autoincrement())
+  title          String
+  description    String?  @db.Text
+  date           DateTime
+  startTime      DateTime
+  endTime        DateTime
+  isSpeakathon   Boolean  @default(false)
+  enableFeedback Boolean  @default(false)
+  venue          String?
+  hall           String?
+  track          String?
+  keywords       String? // comma-separated
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  sessionTypeId Int
+  sessionType   SessionType @relation(fields: [sessionTypeId], references: [id])
+
+  eventId Int
+  event   Event @relation(fields: [eventId], references: [id])
+
+  sponsorTypeId Int?
+  sponsorType   SponsorType? @relation(fields: [sponsorTypeId], references: [id])
+
+  sponsorName String?
+
+  speakerId Int?
+  speaker   User? @relation(fields: [speakerId], references: [id])
+
+  participationTypeId Int?
+  participationType   ParticipationType? @relation(fields: [participationTypeId], references: [id])
+  AwardedPerson       AwardedPerson[]
+}
+
+model AwardType {
+  id        Int      @id @default(autoincrement())
+  awardType String   @unique
+  priority  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relation to Event
+  eventId       Int
+  event         Event           @relation(fields: [eventId], references: [id])
+  AwardedPerson AwardedPerson[]
+}
+
+model AwardedPerson {
+  id         Int      @id @default(autoincrement())
+  eventId    Int
+  sessionId  Int
+  awardId    Int
+  personName String
+  action     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  event     Event     @relation(fields: [eventId], references: [id])
+  session   Session   @relation(fields: [sessionId], references: [id])
+  awardType AwardType @relation(fields: [awardId], references: [id])
 }
