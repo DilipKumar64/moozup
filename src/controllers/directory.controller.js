@@ -39,6 +39,7 @@ const {
 const FileService = require('../services/file.service');
 const { sendWelcomeEmail, sendPasswordEmail } = require('../utils/mailer');
 const bcrypt = require('bcrypt');
+const { createSponsor, findSponsorById, updateSponsor, addSponsorPersons, addSponsorDocument, deleteSponsor, bulkUpdateSponsorDisplayOrder, updateSponsorDisplayOrder, getAllSponsors } = require('../models/sponsor.model');
 
 const isIdValid = (id) => {
   return !isNaN(parseInt(id)) && parseInt(id) > 0;
@@ -1001,6 +1002,462 @@ exports.getUsersByParticipationType = async (req, res) => {
       }
     });
   } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.createSponsor = async (req, res) => {
+  const {
+    name,
+    website,
+    aboutCompany,
+    facebookPageUrl,
+    linkedinPageUrl,
+    twitterPageUrl,
+    sponsorTypeId
+  } = req.body;
+
+  // Validate required fields
+  if (!name || !sponsorTypeId) {
+    return res.status(400).json({
+      message: "Missing required fields. Required fields are: name, sponsorTypeId"
+    });
+  }
+
+  try {
+    // Validate sponsor type exists
+    const sponsorType = await findSponsorTypeById(sponsorTypeId);
+    if (!sponsorType) {
+      return res.status(404).json({
+        message: "Sponsor type not found"
+      });
+    }
+
+    // Handle logo upload if provided
+    let logoUrl = null;
+    if (req.file) {
+      try {
+        logoUrl = await FileService.uploadProfilePicture(req.file);
+      } catch (uploadError) {
+        return res.status(500).json({
+          message: "Failed to upload logo",
+          error: uploadError.message
+        });
+      }
+    }
+
+    // Create the sponsor
+    const sponsor = await createSponsor({
+      name,
+      website: website || null,
+      aboutCompany: aboutCompany || null,
+      facebookPageUrl: facebookPageUrl || null,
+      linkedinPageUrl: linkedinPageUrl || null,
+      twitterPageUrl: twitterPageUrl || null,
+      sponsorTypeId: parseInt(sponsorTypeId),
+      logo: logoUrl
+    });
+
+    res.status(201).json({
+      message: "Sponsor created successfully",
+      sponsor
+    });
+  } catch (error) {
+    console.error("Create sponsor error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.updateSponsor = async (req, res) => {
+  const { id } = req.params;
+  const {
+    name,
+    website,
+    aboutCompany,
+    facebookPageUrl,
+    linkedinPageUrl,
+    twitterPageUrl,
+    youtubeUrl,
+    sponsorTypeId
+  } = req.body;
+
+  try {
+    // Check if sponsor exists
+    const existingSponsor = await findSponsorById(id);
+    if (!existingSponsor) {
+      return res.status(404).json({
+        message: "Sponsor not found"
+      });
+    }
+
+    // If sponsorTypeId is provided, validate it exists
+    if (sponsorTypeId) {
+      const sponsorType = await findSponsorTypeById(sponsorTypeId);
+      if (!sponsorType) {
+        return res.status(404).json({
+          message: "Sponsor type not found"
+        });
+      }
+    }
+
+    // Handle logo upload if provided
+    let logoUrl = existingSponsor.logo;
+    if (req.file) {
+      try {
+        // Delete old logo if it exists
+        if (existingSponsor.logo) {
+          await FileService.deleteProfilePicture(existingSponsor.logo);
+        }
+        // Upload new logo
+        logoUrl = await FileService.uploadProfilePicture(req.file);
+      } catch (uploadError) {
+        return res.status(500).json({
+          message: "Failed to handle logo",
+          error: uploadError.message
+        });
+      }
+    }
+
+    // Prepare update data
+    const updateData = {
+      name: name || existingSponsor.name,
+      website: website !== undefined ? website : existingSponsor.website,
+      aboutCompany: aboutCompany !== undefined ? aboutCompany : existingSponsor.aboutCompany,
+      facebookPageUrl: facebookPageUrl !== undefined ? facebookPageUrl : existingSponsor.facebookPageUrl,
+      linkedinPageUrl: linkedinPageUrl !== undefined ? linkedinPageUrl : existingSponsor.linkedinPageUrl,
+      twitterPageUrl: twitterPageUrl !== undefined ? twitterPageUrl : existingSponsor.twitterPageUrl,
+      youtubeUrl: youtubeUrl !== undefined ? youtubeUrl : existingSponsor.youtubeUrl,
+      sponsorTypeId: sponsorTypeId ? parseInt(sponsorTypeId) : existingSponsor.sponsorTypeId,
+      logo: logoUrl
+    };
+
+    // Update the sponsor
+    const updatedSponsor = await updateSponsor(id, updateData);
+
+    res.status(200).json({
+      message: "Sponsor updated successfully",
+      sponsor: updatedSponsor
+    });
+  } catch (error) {
+    console.error("Update sponsor error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.addSponsorPersons = async (req, res) => {
+  const { id } = req.params;
+  const { userIds } = req.body;
+
+  // Validate input
+  if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+    return res.status(400).json({
+      message: "Please provide an array of user IDs"
+    });
+  }
+
+  try {
+    // Check if sponsor exists
+    const existingSponsor = await findSponsorById(id);
+    if (!existingSponsor) {
+      return res.status(404).json({
+        message: "Sponsor not found"
+      });
+    }
+
+    // Validate all user IDs are numbers
+    const invalidIds = userIds.filter(id => isNaN(parseInt(id)));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        message: "Invalid user IDs provided",
+        invalidIds
+      });
+    }
+
+    // Validate all users exist
+    const userValidationPromises = userIds.map(async (userId) => {
+      const user = await findUserById(userId);
+      return { userId, exists: !!user };
+    });
+
+    const userValidations = await Promise.all(userValidationPromises);
+    const nonExistentUsers = userValidations
+      .filter(validation => !validation.exists)
+      .map(validation => validation.userId);
+
+    if (nonExistentUsers.length > 0) {
+      return res.status(404).json({
+        message: "Some users were not found",
+        nonExistentUsers
+      });
+    }
+
+    // Add users to sponsor
+    const updatedSponsor = await addSponsorPersons(id, userIds);
+
+    res.status(200).json({
+      message: "Sponsor persons added successfully",
+      sponsorPersons: updatedSponsor.sponsorPerson.map(person => ({
+        id: person.id,
+        name: `${person.firstName} ${person.lastName || ''}`.trim(),
+        profilePicture: person.profilePicture
+      }))
+    });
+  } catch (error) {
+    console.error("Add sponsor persons error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.uploadSponsorDocument = async (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+
+  // Validate input
+  if (!name) {
+    return res.status(400).json({
+      message: "Document name is required"
+    });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({
+      message: "Document file is required"
+    });
+  }
+
+  try {
+    // Check if sponsor exists
+    const existingSponsor = await findSponsorById(id);
+    if (!existingSponsor) {
+      return res.status(404).json({
+        message: "Sponsor not found"
+      });
+    }
+
+    // Upload document to Supabase
+    let documentUrl;
+    try {
+      documentUrl = await FileService.uploadDocument(req.file);
+    } catch (uploadError) {
+      return res.status(500).json({
+        message: "Failed to upload document",
+        error: uploadError.message
+      });
+    }
+
+    // Add document to sponsor
+    const document = await addSponsorDocument(id, {
+      name,
+      url: documentUrl
+    });
+
+    res.status(201).json({
+      message: "Document uploaded successfully",
+      document: {
+        id: document.id,
+        name: document.name,
+        url: document.url,
+        createdAt: document.createdAt
+      }
+    });
+  } catch (error) {
+    console.error("Upload sponsor document error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.deleteSponsor = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Check if sponsor exists
+    const existingSponsor = await findSponsorById(id);
+    if (!existingSponsor) {
+      return res.status(404).json({
+        message: "Sponsor not found"
+      });
+    }
+
+    // Delete the sponsor and its associated documents
+    await deleteSponsor(id);
+
+    res.status(200).json({
+      message: "Sponsor deleted successfully"
+    });
+  } catch (error) {
+    console.error("Delete sponsor error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.bulkUpdateSponsorDisplayOrder = async (req, res) => {
+  try {
+    const { updates } = req.body;
+
+    if (!updates || !Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({
+        message: "Please provide an array of updates with sponsor IDs and display orders"
+      });
+    }
+
+    // Validate the updates array
+    const invalidUpdates = updates.filter(update => 
+      !update.id || 
+      !update.displayOrder || 
+      isNaN(parseInt(update.id)) || 
+      isNaN(parseInt(update.displayOrder))
+    );
+
+    if (invalidUpdates.length > 0) {
+      return res.status(400).json({
+        message: "Invalid updates provided",
+        invalidUpdates
+      });
+    }
+
+    try {
+      // Update the display orders
+      const updatedSponsors = await bulkUpdateSponsorDisplayOrder(updates);
+
+      res.status(200).json({
+        message: "Display orders updated successfully",
+        updatedCount: updatedSponsors.length,
+        updatedSponsors: updatedSponsors.map(sponsor => ({
+          id: sponsor.id,
+          name: sponsor.name,
+          displayOrder: sponsor.displayOrder
+        }))
+      });
+    } catch (error) {
+      // Handle the case where some sponsors were not found
+      if (error.message.includes('Sponsors not found')) {
+        return res.status(404).json({
+          message: error.message
+        });
+      }
+      throw error; // Re-throw other errors
+    }
+  } catch (error) {
+    console.error('Bulk update display order error:', error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.updateSponsorDisplayOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { displayOrder } = req.body;
+
+    // Validate input
+    if (!id || !displayOrder) {
+      return res.status(400).json({
+        message: "Sponsor ID and display order are required"
+      });
+    }
+
+    if (isNaN(parseInt(displayOrder))) {
+      return res.status(400).json({
+        message: "Display order must be a number"
+      });
+    }
+
+    // Check if sponsor exists
+    const existingSponsor = await findSponsorById(id);
+    if (!existingSponsor) {
+      return res.status(404).json({
+        message: "Sponsor not found"
+      });
+    }
+
+    // Update display order
+    const updatedSponsor = await updateSponsorDisplayOrder(id, displayOrder);
+
+    res.status(200).json({
+      message: "Sponsor display order updated successfully",
+      sponsor: {
+        id: updatedSponsor.id,
+        name: updatedSponsor.name,
+        displayOrder: updatedSponsor.displayOrder
+      }
+    });
+  } catch (error) {
+    console.error('Update sponsor display order error:', error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.getAllSponsors = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const sponsorTypeId = req.query.sponsorTypeId || null;
+
+    // Validate pagination parameters
+    if (page < 1 || limit < 1) {
+      return res.status(400).json({
+        message: "Page and limit must be positive numbers"
+      });
+    }
+
+    // Validate sponsorTypeId if provided
+    if (sponsorTypeId) {
+      if (isNaN(parseInt(sponsorTypeId))) {
+        return res.status(400).json({
+          message: "Invalid sponsor type ID"
+        });
+      }
+
+      // Check if sponsor type exists
+      const sponsorType = await findSponsorTypeById(sponsorTypeId);
+      if (!sponsorType) {
+        return res.status(404).json({
+          message: `Sponsor type with ID ${sponsorTypeId} not found`
+        });
+      }
+    }
+
+    const result = await getAllSponsors(page, limit, sponsorTypeId);
+
+    res.status(200).json({
+      message: "Sponsors retrieved successfully",
+      data: {
+        sponsors: result.sponsors,
+        pagination: {
+          currentPage: result.currentPage,
+          totalPages: result.totalPages,
+          totalSponsors: result.total,
+          sponsorsPerPage: limit,
+          hasNextPage: result.hasNextPage,
+          hasPreviousPage: result.hasPreviousPage
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Get all sponsors error:", error);
     res.status(500).json({
       message: "Something went wrong",
       error: error.message
