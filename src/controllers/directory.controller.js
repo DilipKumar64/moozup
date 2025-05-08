@@ -30,7 +30,10 @@ const {
   findUserById,
   updateUser,
   deleteUser,
-  findUsersByEventId
+  findUsersByEventId,
+  bulkDeleteUsers,
+  bulkUpdateDisplayOrder,
+  updateUserDisplayOrder
 } = require('../models/user.models');
 const FileService = require('../services/file.service');
 const { sendWelcomeEmail, sendPasswordEmail } = require('../utils/mailer');
@@ -812,6 +815,132 @@ exports.getEventUsers = async (req, res) => {
       users
     });
   } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.bulkDeleteUsers = async (req, res) => {
+  const { userIds } = req.body;
+
+  if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+    return res.status(400).json({
+      message: "Please provide an array of user IDs to delete"
+    });
+  }
+
+  try {
+    // Validate all IDs are valid numbers
+    const invalidIds = userIds.filter(id => isNaN(parseInt(id)));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        message: "Invalid user IDs provided",
+        invalidIds
+      });
+    }
+
+    // Delete the users
+    const result = await bulkDeleteUsers(userIds);
+
+    res.status(200).json({
+      message: "Users deleted successfully",
+      deletedCount: result.count
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.bulkUpdateDisplayOrder = async (req, res) => {
+  try {
+    const { updates } = req.body;
+
+    if (!updates || !Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({
+        message: "Please provide an array of updates with user IDs and display orders"
+      });
+    }
+
+    // Validate the updates array
+    const invalidUpdates = updates.filter(update => 
+      !update.id || 
+      !update.displayOrder || 
+      isNaN(parseInt(update.id)) || 
+      isNaN(parseInt(update.displayOrder))
+    );
+
+    if (invalidUpdates.length > 0) {
+      return res.status(400).json({
+        message: "Invalid updates provided",
+        invalidUpdates
+      });
+    }
+
+    // Update the display orders
+    const updatedUsers = await bulkUpdateDisplayOrder(updates);
+
+    res.status(200).json({
+      message: "Display orders updated successfully",
+      updatedCount: updatedUsers.length,
+      updatedUsers: updatedUsers.map(user => ({
+        id: user.id,
+        displayOrder: user.displayOrder,
+        name: `${user.firstName} ${user.lastName || ''}`.trim()
+      }))
+    });
+  } catch (error) {
+    console.error('Bulk update display order error:', error); // Debug log
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.updateUserDisplayOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { displayOrder } = req.body;
+
+    // Validate input
+    if (!id || !displayOrder) {
+      return res.status(400).json({
+        message: "User ID and display order are required"
+      });
+    }
+
+    if (isNaN(parseInt(displayOrder))) {
+      return res.status(400).json({
+        message: "Display order must be a number"
+      });
+    }
+
+    // Check if user exists
+    const existingUser = await findUserById(id);
+    if (!existingUser) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    // Update display order
+    const updatedUser = await updateUserDisplayOrder(id, displayOrder);
+
+    res.status(200).json({
+      message: "User display order updated successfully",
+      user: {
+        id: updatedUser.id,
+        name: `${updatedUser.firstName} ${updatedUser.lastName || ''}`.trim(),
+        displayOrder: updatedUser.displayOrder
+      }
+    });
+  } catch (error) {
+    console.error('Update display order error:', error);
     res.status(500).json({
       message: "Something went wrong",
       error: error.message

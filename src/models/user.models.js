@@ -45,6 +45,41 @@ const findUsersByEventId = (eventId) => prisma.user.findMany({
   }
 });
 
+const bulkDeleteUsers = async (userIds) => {
+  return await prisma.user.deleteMany({
+    where: {
+      id: {
+        in: userIds.map(id => parseInt(id))
+      }
+    }
+  });
+};
+
+const bulkUpdateDisplayOrder = async (updates) => {
+  // updates should be an array of { id: number, displayOrder: number }
+  const operations = updates.map(update => 
+    prisma.user.update({
+      where: { id: parseInt(update.id) },
+      data: { displayOrder: parseInt(update.displayOrder) }
+    })
+  );
+
+  return await prisma.$transaction(operations);
+};
+
+const updateUserDisplayOrder = async (id, displayOrder) => {
+  return await prisma.user.update({
+    where: { id: parseInt(id) },
+    data: { displayOrder: parseInt(displayOrder) },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      displayOrder: true
+    }
+  });
+};
+
 module.exports = {
   createUser,
   findUserByEmail,
@@ -52,5 +87,8 @@ module.exports = {
   updateUser,
   deleteUser,
   updateUserPassword,
-  findUsersByEventId
+  findUsersByEventId,
+  bulkDeleteUsers,
+  bulkUpdateDisplayOrder,
+  updateUserDisplayOrder
 };
