@@ -18,30 +18,63 @@ const updateUserPassword = async (userId, hashedPassword) => {
   });
 };
 
-const findUsersByEventId = (eventId) => prisma.user.findMany({
+const findUsersByEventId = (eventId, page = 1, limit = 10) => {
+  const skip = (page - 1) * limit;
+  
+  return prisma.$transaction([
+    prisma.user.count({
+      where: {
+        participationType: {
+          eventId: parseInt(eventId)
+        }
+      }
+    }),
+    prisma.user.findMany({
+      where: {
+        participationType: {
+          eventId: parseInt(eventId)
+        }
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phoneNumber: true,
+        companyName: true,
+        jobTitle: true,
+        profilePicture: true,
+        facebookUrl: true,
+        twitterUrl: true,
+        linkedinUrl: true,
+        participationType: {
+          select: {
+            personParticipationType: true,
+            groupParticipationName: true
+          }
+        }
+      },
+      skip,
+      take: limit,
+      orderBy: {
+        displayOrder: 'asc'
+      }
+    })
+  ]);
+};
+
+const findUsersByParticipationTypeId = (participationTypeId) => prisma.user.findMany({
   where: {
-    participationType: {
-      eventId: parseInt(eventId)
-    }
+    participationTypeId: parseInt(participationTypeId)
   },
   select: {
     id: true,
     firstName: true,
-    lastName: true,
     email: true,
-    phoneNumber: true,
-    companyName: true,
-    jobTitle: true,
-    profilePicture: true,
-    facebookUrl: true,
-    twitterUrl: true,
-    linkedinUrl: true,
-    participationType: {
-      select: {
-        personParticipationType: true,
-        groupParticipationName: true
-      }
-    }
+    displayOrder: true
+  },
+  orderBy: {
+    displayOrder: 'asc'
   }
 });
 
@@ -88,6 +121,7 @@ module.exports = {
   deleteUser,
   updateUserPassword,
   findUsersByEventId,
+  findUsersByParticipationTypeId,
   bulkDeleteUsers,
   bulkUpdateDisplayOrder,
   updateUserDisplayOrder

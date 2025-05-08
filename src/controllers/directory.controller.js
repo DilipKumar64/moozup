@@ -31,6 +31,7 @@ const {
   updateUser,
   deleteUser,
   findUsersByEventId,
+  findUsersByParticipationTypeId,
   bulkDeleteUsers,
   bulkUpdateDisplayOrder,
   updateUserDisplayOrder
@@ -806,13 +807,32 @@ exports.getUserByEmail = async (req, res) => {
 
 exports.getEventUsers = async (req, res) => {
   const { eventId } = req.params;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  if (page < 1 || limit < 1) {
+    return res.status(400).json({
+      message: "Page and limit must be positive numbers"
+    });
+  }
 
   try {
-    const users = await findUsersByEventId(eventId);
+    const [totalUsers, users] = await findUsersByEventId(eventId, page, limit);
+    const totalPages = Math.ceil(totalUsers / limit);
 
     res.status(200).json({
       message: "Event users retrieved successfully",
-      users
+      data: {
+        users,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalUsers,
+          usersPerPage: limit,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1
+        }
+      }
     });
   } catch (error) {
     res.status(500).json({
@@ -941,6 +961,46 @@ exports.updateUserDisplayOrder = async (req, res) => {
     });
   } catch (error) {
     console.error('Update display order error:', error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.getUsersByParticipationType = async (req, res) => {
+  const { participationTypeId } = req.params;
+
+  // Validate ID
+  if (!participationTypeId || isNaN(parseInt(participationTypeId)) || parseInt(participationTypeId) <= 0) {
+    return res.status(400).json({
+      message: "Invalid participation type ID. ID must be a positive number."
+    });
+  }
+
+  try {
+    // First verify if participation type exists
+    const participationType = await findParticipationTypeById(participationTypeId);
+    if (!participationType) {
+      return res.status(404).json({
+        message: "Participation type not found"
+      });
+    }
+
+    const users = await findUsersByParticipationTypeId(participationTypeId);
+
+    res.status(200).json({
+      message: "Users retrieved successfully",
+      data: {
+        users,
+        participationType: {
+          id: participationType.id,
+          personParticipationType: participationType.personParticipationType,
+          groupParticipationName: participationType.groupParticipationName
+        }
+      }
+    });
+  } catch (error) {
     res.status(500).json({
       message: "Something went wrong",
       error: error.message

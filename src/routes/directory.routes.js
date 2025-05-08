@@ -24,6 +24,7 @@ const {
   sendUserPassword,
   getUserByEmail,
   getEventUsers,
+  getUsersByParticipationType,
   bulkDeleteUsers,
   bulkUpdateDisplayOrder,
   updateUserDisplayOrder
@@ -57,8 +58,10 @@ router.patch('/people/note/:id', authenticateJWT, updateUserNote);
 router.post('/people/send-password/:id', authenticateJWT, sendUserPassword);
 router.get('/people/email/:email', getUserByEmail);
 router.get('/people/event/:eventId', authenticateJWT, getEventUsers);
+router.get('/people/participation-type/:participationTypeId', authenticateJWT, getUsersByParticipationType);
 router.post('/people/bulk-delete', authenticateJWT, bulkDeleteUsers);
 router.post('/people/bulk-display-order', authenticateJWT, bulkUpdateDisplayOrder);
 router.patch('/people/display-order/:id', authenticateJWT, updateUserDisplayOrder);
+
 
 module.exports = router;
