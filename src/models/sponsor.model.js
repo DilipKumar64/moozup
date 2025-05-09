@@ -35,24 +35,52 @@ const updateSponsor = (id, data) => prisma.sponsor.update({
 });
 
 const addSponsorPersons = async (sponsorId, userIds) => {
-  return prisma.sponsor.update({
-    where: { id: parseInt(sponsorId) },
-    data: {
-      sponsorPerson: {
-        connect: userIds.map(id => ({ id: parseInt(id) }))
-      }
-    },
-    include: {
-      sponsorPerson: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          profilePicture: true
+  try {
+    // First get the current sponsor to get existing person IDs
+    const currentSponsor = await prisma.sponsor.findUnique({
+      where: { id: parseInt(sponsorId) },
+      include: {
+        sponsorPerson: {
+          select: { id: true }
         }
       }
-    }
-  });
+    });
+
+    // Disconnect all existing persons
+    const updatedSponsor = await prisma.sponsor.update({
+      where: { id: parseInt(sponsorId) },
+      data: {
+        sponsorPerson: {
+          disconnect: currentSponsor.sponsorPerson.map(person => ({ id: person.id }))
+        }
+      }
+    });
+
+    // Connect new persons
+    const finalSponsor = await prisma.sponsor.update({
+      where: { id: parseInt(sponsorId) },
+      data: {
+        sponsorPerson: {
+          connect: userIds.map(id => ({ id: parseInt(id) }))
+        }
+      },
+      include: {
+        sponsorPerson: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profilePicture: true
+          }
+        }
+      }
+    });
+
+    return finalSponsor;
+  } catch (error) {
+    console.error("Error updating sponsor persons:", error);
+    throw error;
+  }
 };
 
 const addSponsorDocument = async (sponsorId, documentData) => {

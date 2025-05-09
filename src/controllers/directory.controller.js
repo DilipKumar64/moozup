@@ -1202,11 +1202,11 @@ exports.addSponsorPersons = async (req, res) => {
       });
     }
 
-    // Add users to sponsor
+    // Replace all sponsor persons with new array
     const updatedSponsor = await addSponsorPersons(id, userIds);
 
     res.status(200).json({
-      message: "Sponsor persons added successfully",
+      message: "Sponsor persons updated successfully",
       sponsorPersons: updatedSponsor.sponsorPerson.map(person => ({
         id: person.id,
         name: `${person.firstName} ${person.lastName || ''}`.trim(),
