@@ -25,6 +25,7 @@ const {
   getUserByEmail,
   getEventUsers
 } = require('../controllers/directory.controller');
+const uploadFields = require("../middlewares/upload.middleware2");
 
 // Participation Type Routes
 router.post('/participation-types', authenticateJWT, createParticipationType);
@@ -47,7 +48,7 @@ router.delete('/exhibitor-types/:id', authenticateJWT, deleteExhibitorType);
 router.get('/exhibitor-types/event/:eventId', authenticateJWT, getExhibitorTypesByEvent);
 
 // People routes
-router.post('/people', authenticateJWT, upload.single('profilePicture'), handleMulterError, createDirectoryUser);
+router.post('/people', authenticateJWT, uploadFields.profilePicture, handleMulterError, createDirectoryUser);
 router.put('/people/:id', authenticateJWT, upload.single('profilePicture'), handleMulterError, updateDirectoryUser);
 router.delete('/people/:id', authenticateJWT, deleteDirectoryUser);
 router.patch('/people/note/:id', authenticateJWT, updateUserNote);
