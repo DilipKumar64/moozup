@@ -8,6 +8,8 @@ const router = express.Router();
 // Middleware to handle multipart/form-data (if needed)
 router.use(multer().none());
 
+
+
 router.post("/create-category",authenticateJWT,eventCategoryController.createCategory);
 router.get("/get-all-categories",authenticateJWT,eventCategoryController.getAllCategories);
 router.get("/get-single-category/:id",authenticateJWT,eventCategoryController.getSingleCategory);
