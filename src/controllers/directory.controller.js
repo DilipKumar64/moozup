@@ -37,7 +37,7 @@ const {
   updateUserDisplayOrder
 } = require('../models/user.models');
 
-const { createExhibitor, findExhibitorById, updateExhibitor, addExhibitorPersons } = require('../models/exhibitor.model');
+const { createExhibitor, findExhibitorById, updateExhibitor, addExhibitorPersons, addExhibitorDocument } = require('../models/exhibitor.model');
 const FileService = require('../services/file.service');
 const { sendWelcomeEmail, sendPasswordEmail } = require('../utils/mailer');
 const bcrypt = require('bcrypt');
@@ -1677,6 +1677,67 @@ exports.addExhibitorPersons = async (req, res) => {
     });
   } catch (error) {
     console.error("Add exhibitor persons error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.uploadExhibitorDocument = async (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+
+  // Validate input
+  if (!name) {
+    return res.status(400).json({
+      message: "Document name is required"
+    });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({
+      message: "Document file is required"
+    });
+  }
+
+  try {
+    // Check if exhibitor exists
+    const existingExhibitor = await findExhibitorById(id);
+    if (!existingExhibitor) {
+      return res.status(404).json({
+        message: "Exhibitor not found"
+      });
+    }
+
+    // Upload document to Supabase
+    let documentUrl;
+    try {
+      documentUrl = await FileService.uploadDocument(req.file);
+    } catch (uploadError) {
+      return res.status(500).json({
+        message: "Failed to upload document",
+        error: uploadError.message
+      });
+    }
+
+    // Add document to exhibitor
+    const document = await addExhibitorDocument(id, {
+      name,
+      url: documentUrl
+    });
+
+    res.status(201).json({
+      message: "Document uploaded successfully",
+      document: {
+        id: document.id,
+        name: document.name,
+        url: document.url,
+        createdAt: document.createdAt
+      }
+    });
+  } catch (error) {
+    console.error("Upload exhibitor document error:", error);
     res.status(500).json({
       message: "Something went wrong",
       error: error.message

@@ -98,7 +98,8 @@ const addExhibitorPersons = async (exhibitorId, userIds) => {
 const addExhibitorDocument = async (exhibitorId, documentData) => {
   return prisma.exhibitorDocument.create({
     data: {
-      ...documentData,
+      name: documentData.name,
+      url: documentData.url,
       exhibitorId: parseInt(exhibitorId)
     }
   });

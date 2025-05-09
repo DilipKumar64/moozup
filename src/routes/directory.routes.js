@@ -38,7 +38,8 @@ const {
   getAllSponsors,
   createExhibitor,
   updateExhibitor,
-  addExhibitorPersons
+  addExhibitorPersons,
+  uploadExhibitorDocument
 } = require('../controllers/directory.controller');
 
 // Participation Type Routes
@@ -88,5 +89,6 @@ router.patch('/sponsors/:id/display-order', authenticateJWT, updateSponsorDispla
 router.post('/exhibitors', authenticateJWT, upload.single('logo'), handleMulterError, createExhibitor);
 router.put('/exhibitors/:id', authenticateJWT, upload.single('logo'), handleMulterError, updateExhibitor);
 router.post('/exhibitors/:id/persons', authenticateJWT, addExhibitorPersons);
+router.post('/exhibitors/:id/documents', authenticateJWT, documentUpload.single('document'), handleMulterError, uploadExhibitorDocument);
 
 module.exports = router;
