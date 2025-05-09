@@ -162,13 +162,18 @@ const updateExhibitorDisplayOrder = async (id, displayOrder) => {
   });
 };
 
-const getAllExhibitors = async (page = 1, limit = 10, exhibitorTypeId = null) => {
+const getAllExhibitors = async (page = 1, limit = 10, exhibitorTypeId = null, eventId = null) => {
   const skip = (page - 1) * limit;
   
   // Build where clause
-  const where = exhibitorTypeId ? {
-    exhibitorTypeId: parseInt(exhibitorTypeId)
-  } : {};
+  const where = {
+    ...(exhibitorTypeId ? { exhibitorTypeId: parseInt(exhibitorTypeId) } : {}),
+    ...(eventId ? {
+      exhibitorType: {
+        eventId: parseInt(eventId)
+      }
+    } : {})
+  };
 
   // Get total count
   const total = await prisma.exhibitor.count({ where });
@@ -178,13 +183,14 @@ const getAllExhibitors = async (page = 1, limit = 10, exhibitorTypeId = null) =>
     where,
     skip,
     take: limit,
-    include: {
-      exhibitorType: true,
-      exhibitorPersons: true,
-      documents: true
+    select: {
+      id: true,
+      name: true,
+      website: true,
+      logo: true
     },
     orderBy: {
-      displayOrder: 'asc'
+      createdAt: 'desc'
     }
   });
 

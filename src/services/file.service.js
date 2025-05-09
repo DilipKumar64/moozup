@@ -6,7 +6,7 @@ class FileService {
    * @param {Object} file - The file object from multer
    * @returns {Promise<string>} The URL of the uploaded file
    */
-  static async uploadProfilePicture(file) {
+  static async uploadProfilePicture(file, folder) {
     if (!file) {
       return null;
     }
@@ -15,7 +15,7 @@ class FileService {
       const { url } = await uploadToSupabase(
         file.buffer,
         file.originalname,
-        'profile-pictures'
+        folder
       );
       return url;
     } catch (error) {

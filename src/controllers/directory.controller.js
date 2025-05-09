@@ -37,7 +37,16 @@ const {
   updateUserDisplayOrder
 } = require('../models/user.models');
 
-const { createExhibitor, findExhibitorById, updateExhibitor, addExhibitorPersons, addExhibitorDocument } = require('../models/exhibitor.model');
+const {
+  createExhibitor,
+  findExhibitorById,
+  updateExhibitor,
+  addExhibitorPersons,
+  addExhibitorDocument,
+  getAllExhibitors,
+  deleteExhibitor
+} = require('../models/exhibitor.model');
+
 const FileService = require('../services/file.service');
 const { sendWelcomeEmail, sendPasswordEmail } = require('../utils/mailer');
 const bcrypt = require('bcrypt');
@@ -1738,6 +1747,128 @@ exports.uploadExhibitorDocument = async (req, res) => {
     });
   } catch (error) {
     console.error("Upload exhibitor document error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.getExhibitorById = async (req, res) => {
+  const { id } = req.params;
+
+  // Validate ID
+  if (!id || isNaN(parseInt(id)) || parseInt(id) <= 0) {
+    return res.status(400).json({
+      message: "Invalid exhibitor ID. ID must be a positive number."
+    });
+  }
+
+  try {
+    // Get exhibitor by ID
+    const exhibitor = await findExhibitorById(id);
+    
+    if (!exhibitor) {
+      return res.status(404).json({
+        message: "Exhibitor not found"
+      });
+    }
+
+    res.status(200).json({
+      message: "Exhibitor retrieved successfully",
+      exhibitor
+    });
+  } catch (error) {
+    console.error("Get exhibitor error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.getEventExhibitors = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const exhibitorTypeId = req.query.exhibitorTypeId || null;
+
+    // Validate pagination parameters
+    if (page < 1 || limit < 1) {
+      return res.status(400).json({
+        message: "Page and limit must be positive numbers"
+      });
+    }
+
+    // Validate exhibitorTypeId if provided
+    if (exhibitorTypeId) {
+      if (isNaN(parseInt(exhibitorTypeId))) {
+        return res.status(400).json({
+          message: "Invalid exhibitor type ID"
+        });
+      }
+
+      // Check if exhibitor type exists
+      const exhibitorType = await findExhibitorTypeById(exhibitorTypeId);
+      if (!exhibitorType) {
+        return res.status(404).json({
+          message: `Exhibitor type with ID ${exhibitorTypeId} not found`
+        });
+      }
+    }
+
+    const result = await getAllExhibitors(page, limit, exhibitorTypeId);
+
+    res.status(200).json({
+      message: "Exhibitors retrieved successfully",
+      data: {
+        exhibitors: result.exhibitors,
+        pagination: {
+          currentPage: result.currentPage,
+          totalPages: result.totalPages,
+          totalExhibitors: result.total,
+          exhibitorsPerPage: limit,
+          hasNextPage: result.hasNextPage,
+          hasPreviousPage: result.hasPreviousPage
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Get exhibitors error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.deleteExhibitor = async (req, res) => {
+  const { id } = req.params;
+
+  // Validate ID
+  if (!id || isNaN(parseInt(id)) || parseInt(id) <= 0) {
+    return res.status(400).json({
+      message: "Invalid exhibitor ID. ID must be a positive number."
+    });
+  }
+
+  try {
+    // Check if exhibitor exists
+    const existingExhibitor = await findExhibitorById(id);
+    if (!existingExhibitor) {
+      return res.status(404).json({
+        message: "Exhibitor not found"
+      });
+    }
+
+    // Delete the exhibitor
+    await deleteExhibitor(id);
+
+    res.status(200).json({
+      message: "Exhibitor deleted successfully"
+    });
+  } catch (error) {
+    console.error("Delete exhibitor error:", error);
     res.status(500).json({
       message: "Something went wrong",
       error: error.message

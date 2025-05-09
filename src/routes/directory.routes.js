@@ -39,7 +39,10 @@ const {
   createExhibitor,
   updateExhibitor,
   addExhibitorPersons,
-  uploadExhibitorDocument
+  uploadExhibitorDocument,
+  getExhibitorById,
+  getEventExhibitors,
+  deleteExhibitor
 } = require('../controllers/directory.controller');
 
 // Participation Type Routes
@@ -90,5 +93,8 @@ router.post('/exhibitors', authenticateJWT, upload.single('logo'), handleMulterE
 router.put('/exhibitors/:id', authenticateJWT, upload.single('logo'), handleMulterError, updateExhibitor);
 router.post('/exhibitors/:id/persons', authenticateJWT, addExhibitorPersons);
 router.post('/exhibitors/:id/documents', authenticateJWT, documentUpload.single('document'), handleMulterError, uploadExhibitorDocument);
+router.get('/exhibitors/:id', authenticateJWT, getExhibitorById); //exhibitor by id
+router.get('/exhibitors', authenticateJWT, getEventExhibitors); //all exhibitors
+router.delete('/exhibitors/:id', authenticateJWT, deleteExhibitor); //delete exhibitor
 
 module.exports = router;
