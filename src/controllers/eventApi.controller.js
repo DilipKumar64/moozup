@@ -70,8 +70,16 @@ exports.createEvent = async (req, res) => {
       });
     }
 
-    const logoUrl = await uploadToSupabase(req.files.logo[0], "logos");
-    const bannerUrl = await uploadToSupabase(req.files.banner[0], "banners");
+    let logoUrl = null;
+    let bannerUrl = null;
+
+    if (req.files && req.files.logo && req.files.logo.length > 0) {
+      logoUrl = await uploadToSupabase(req.files.logo[0], "logos");
+    }
+
+    if (req.files && req.files.banner && req.files.banner.length > 0) {
+      bannerUrl = await uploadToSupabase(req.files.banner[0], "banners");
+    }
 
     const newEvent = await createEvent({
       eventName,
@@ -165,18 +173,14 @@ exports.updateEvent = async (req, res) => {
 
     // If a new logo is uploaded, upload it and delete the old one
     if (logo) {
-      logoUrl = await uploadToSupabase(
-        logo[0],
-        "event-logos",
-        existingEvent.logo
-      ); // Pass the old logo URL for deletion
+      logoUrl = await uploadToSupabase(logo[0], "logos", existingEvent.logo); // Pass the old logo URL for deletion
     }
 
     // If a new banner is uploaded, upload it and delete the old one
     if (banner) {
       bannerUrl = await uploadToSupabase(
         banner[0],
-        "event-banners",
+        "banners",
         existingEvent.banner
       ); // Pass the old banner URL for deletion
     }
