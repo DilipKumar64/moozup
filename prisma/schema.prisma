@@ -59,6 +59,7 @@ model User {
   EventInvite    EventInvite[]
   Session        Session[]
   sponsors       Sponsor[]       @relation("SponsorPerson")
+  exhibitors     Exhibitor[]     @relation("ExhibitorPerson")
 }
 
 model EventCategory {
@@ -242,6 +243,9 @@ model ExhibitorType {
   // Relation to Event
   eventId Int
   event   Event @relation(fields: [eventId], references: [id])
+  
+  // Relation to Exhibitors
+  exhibitors Exhibitor[]
 }
 
 model SessionType {
@@ -355,4 +359,42 @@ model SponsorDocument {
   // Relation to Sponsor
   sponsorId Int
   sponsor   Sponsor @relation(fields: [sponsorId], references: [id])
+}
+
+model Exhibitor {
+  id              Int      @id @default(autoincrement())
+  name            String
+  website         String
+  stall           String?
+  location        String?  // city
+  aboutCompany    String?  @db.VarChar(500)
+  email           String?
+  phone           String?
+  facebookPageUrl String?
+  linkedinPageUrl String?
+  twitterPageUrl  String?
+  logo            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  exhibitorTypeId Int
+  exhibitorType   ExhibitorType @relation(fields: [exhibitorTypeId], references: [id])
+
+  // Many-to-many relation with User
+  exhibitorPersons User[] @relation("ExhibitorPerson")
+
+  // Documents array
+  documents ExhibitorDocument[]
+}
+
+model ExhibitorDocument {
+  id        Int      @id @default(autoincrement())
+  name      String
+  url       String
+  createdAt DateTime @default(now())
+
+  // Relation to Exhibitor
+  exhibitorId Int
+  exhibitor   Exhibitor @relation(fields: [exhibitorId], references: [id])
 }

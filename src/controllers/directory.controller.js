@@ -36,6 +36,8 @@ const {
   bulkUpdateDisplayOrder,
   updateUserDisplayOrder
 } = require('../models/user.models');
+
+const { createExhibitor, findExhibitorById, updateExhibitor, addExhibitorPersons } = require('../models/exhibitor.model');
 const FileService = require('../services/file.service');
 const { sendWelcomeEmail, sendPasswordEmail } = require('../utils/mailer');
 const bcrypt = require('bcrypt');
@@ -1458,6 +1460,223 @@ exports.getAllSponsors = async (req, res) => {
     });
   } catch (error) {
     console.error("Get all sponsors error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.createExhibitor = async (req, res) => {
+  const {
+    name,
+    website,
+    exhibitorTypeId,
+    location,
+    stall,
+    aboutCompany,
+    facebookPageUrl,
+    linkedinPageUrl,
+    twitterPageUrl
+  } = req.body;
+
+  // Validate required fields
+  if (!name || !website || !exhibitorTypeId) {
+    return res.status(400).json({
+      message: "Missing required fields. Required fields are: name, website, exhibitorTypeId"
+    });
+  }
+
+  try {
+    // Validate exhibitor type exists
+    const exhibitorType = await findExhibitorTypeById(exhibitorTypeId);
+    if (!exhibitorType) {
+      return res.status(404).json({
+        message: "Exhibitor type not found"
+      });
+    }
+
+    // Handle logo upload if provided
+    let logoUrl = null;
+    if (req.file) {
+      try {
+        logoUrl = await FileService.uploadProfilePicture(req.file);
+      } catch (uploadError) {
+        return res.status(500).json({
+          message: "Failed to upload logo",
+          error: uploadError.message
+        });
+      }
+    }
+
+    // Create the exhibitor
+    const exhibitor = await createExhibitor({
+      name,
+      website,
+      exhibitorTypeId: parseInt(exhibitorTypeId),
+      location: location || null,
+      stall: stall || null,
+      aboutCompany: aboutCompany || null,
+      facebookPageUrl: facebookPageUrl || null,
+      linkedinPageUrl: linkedinPageUrl || null,
+      twitterPageUrl: twitterPageUrl || null,
+      logo: logoUrl
+    });
+
+    res.status(201).json({
+      message: "Exhibitor created successfully",
+      exhibitor
+    });
+  } catch (error) {
+    console.error("Create exhibitor error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.updateExhibitor = async (req, res) => {
+  const { id } = req.params;
+  const {
+    name,
+    website,
+    exhibitorTypeId,
+    location,
+    stall,
+    aboutCompany,
+    facebookPageUrl,
+    linkedinPageUrl,
+    twitterPageUrl
+  } = req.body;
+
+  try {
+    // Check if exhibitor exists
+    const existingExhibitor = await findExhibitorById(id);
+    if (!existingExhibitor) {
+      return res.status(404).json({
+        message: "Exhibitor not found"
+      });
+    }
+
+    // Validate exhibitor type exists if provided
+    if (exhibitorTypeId) {
+      const exhibitorType = await findExhibitorTypeById(exhibitorTypeId);
+      if (!exhibitorType) {
+        return res.status(404).json({
+          message: "Exhibitor type not found"
+        });
+      }
+    }
+
+    // Handle logo upload if provided
+    let logoUrl = existingExhibitor.logo;
+    if (req.file) {
+      try {
+        // Delete old logo if it exists
+        if (existingExhibitor.logo) {
+          await FileService.deleteProfilePicture(existingExhibitor.logo);
+        }
+        // Upload new logo
+        logoUrl = await FileService.uploadProfilePicture(req.file);
+      } catch (uploadError) {
+        return res.status(500).json({
+          message: "Failed to handle logo",
+          error: uploadError.message
+        });
+      }
+    }
+
+    // Prepare update data
+    const updateData = {
+      name: name || existingExhibitor.name,
+      website: website || existingExhibitor.website,
+      exhibitorTypeId: exhibitorTypeId ? parseInt(exhibitorTypeId) : existingExhibitor.exhibitorTypeId,
+      location: location !== undefined ? location : existingExhibitor.location,
+      stall: stall !== undefined ? stall : existingExhibitor.stall,
+      aboutCompany: aboutCompany !== undefined ? aboutCompany : existingExhibitor.aboutCompany,
+      facebookPageUrl: facebookPageUrl !== undefined ? facebookPageUrl : existingExhibitor.facebookPageUrl,
+      linkedinPageUrl: linkedinPageUrl !== undefined ? linkedinPageUrl : existingExhibitor.linkedinPageUrl,
+      twitterPageUrl: twitterPageUrl !== undefined ? twitterPageUrl : existingExhibitor.twitterPageUrl,
+      logo: logoUrl
+    };
+
+    // Update the exhibitor
+    const updatedExhibitor = await updateExhibitor(id, updateData);
+
+    res.status(200).json({
+      message: "Exhibitor updated successfully",
+      exhibitor: updatedExhibitor
+    });
+  } catch (error) {
+    console.error("Update exhibitor error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.addExhibitorPersons = async (req, res) => {
+  const { id } = req.params;
+  const { userIds } = req.body;
+
+  // Validate input
+  if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+    return res.status(400).json({
+      message: "Please provide an array of user IDs"
+    });
+  }
+
+  try {
+    // Check if exhibitor exists
+    const existingExhibitor = await findExhibitorById(id);
+    if (!existingExhibitor) {
+      return res.status(404).json({
+        message: "Exhibitor not found"
+      });
+    }
+
+    // Validate all user IDs are numbers
+    const invalidIds = userIds.filter(id => isNaN(parseInt(id)));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        message: "Invalid user IDs provided",
+        invalidIds
+      });
+    }
+
+    // Validate all users exist
+    const userValidationPromises = userIds.map(async (userId) => {
+      const user = await findUserById(userId);
+      return { userId, exists: !!user };
+    });
+
+    const userValidations = await Promise.all(userValidationPromises);
+    const nonExistentUsers = userValidations
+      .filter(validation => !validation.exists)
+      .map(validation => validation.userId);
+
+    if (nonExistentUsers.length > 0) {
+      return res.status(404).json({
+        message: "Some users were not found",
+        nonExistentUsers
+      });
+    }
+
+    // Add users to exhibitor
+    const updatedExhibitor = await addExhibitorPersons(id, userIds);
+
+    res.status(200).json({
+      message: "Exhibitor persons added successfully",
+      exhibitorPersons: updatedExhibitor.exhibitorPersons.map(person => ({
+        id: person.id,
+        name: `${person.firstName} ${person.lastName || ''}`.trim(),
+        profilePicture: person.profilePicture
+      }))
+    });
+  } catch (error) {
+    console.error("Add exhibitor persons error:", error);
     res.status(500).json({
       message: "Something went wrong",
       error: error.message
