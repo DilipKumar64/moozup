@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const authenticateJWT = require("../middlewares/auth.middleware");
-const { upload, handleMulterError } = require("../middlewares/upload.middleware");
+const { upload, documentUpload, handleMulterError } = require("../middlewares/upload.middleware");
 const {
   createParticipationType,
   updateParticipationType,
@@ -23,7 +23,26 @@ const {
   updateUserNote,
   sendUserPassword,
   getUserByEmail,
-  getEventUsers
+  getEventUsers,
+  getUsersByParticipationType,
+  bulkDeleteUsers,
+  bulkUpdateDisplayOrder,
+  updateUserDisplayOrder,
+  createSponsor,
+  updateSponsor,
+  deleteSponsor,
+  addSponsorPersons,
+  uploadSponsorDocument,
+  bulkUpdateSponsorDisplayOrder,
+  updateSponsorDisplayOrder,
+  getAllSponsors,
+  createExhibitor,
+  updateExhibitor,
+  addExhibitorPersons,
+  uploadExhibitorDocument,
+  getExhibitorById,
+  getEventExhibitors,
+  deleteExhibitor
 } = require('../controllers/directory.controller');
 const uploadFields = require("../middlewares/upload.middleware2");
 
@@ -55,5 +74,28 @@ router.patch('/people/note/:id', authenticateJWT, updateUserNote);
 router.post('/people/send-password/:id', authenticateJWT, sendUserPassword);
 router.get('/people/email/:email', getUserByEmail);
 router.get('/people/event/:eventId', authenticateJWT, getEventUsers);
+router.get('/people/participation-type/:participationTypeId', authenticateJWT, getUsersByParticipationType);
+router.post('/people/bulk-delete', authenticateJWT, bulkDeleteUsers);
+router.post('/people/bulk-display-order', authenticateJWT, bulkUpdateDisplayOrder);
+router.patch('/people/display-order/:id', authenticateJWT, updateUserDisplayOrder);
+
+// Sponsor routes
+router.get('/sponsors', authenticateJWT, getAllSponsors);
+router.post('/sponsors', authenticateJWT, upload.single('logo'), handleMulterError, createSponsor);
+router.put('/sponsors/:id', authenticateJWT, upload.single('logo'), handleMulterError, updateSponsor);
+router.delete('/sponsors/:id', authenticateJWT, deleteSponsor);
+router.post('/sponsors/:id/persons', authenticateJWT, addSponsorPersons);
+router.post('/sponsors/:id/documents', authenticateJWT, documentUpload.single('document'), handleMulterError, uploadSponsorDocument);
+router.post('/sponsors/bulk-display-order', authenticateJWT, bulkUpdateSponsorDisplayOrder);
+router.patch('/sponsors/:id/display-order', authenticateJWT, updateSponsorDisplayOrder);
+
+// Exhibitor routes
+router.post('/exhibitors', authenticateJWT, upload.single('logo'), handleMulterError, createExhibitor);
+router.put('/exhibitors/:id', authenticateJWT, upload.single('logo'), handleMulterError, updateExhibitor);
+router.post('/exhibitors/:id/persons', authenticateJWT, addExhibitorPersons);
+router.post('/exhibitors/:id/documents', authenticateJWT, documentUpload.single('document'), handleMulterError, uploadExhibitorDocument);
+router.get('/exhibitors/:id', authenticateJWT, getExhibitorById); //exhibitor by id
+router.get('/exhibitors', authenticateJWT, getEventExhibitors); //all exhibitors
+router.delete('/exhibitors/:id', authenticateJWT, deleteExhibitor); //delete exhibitor
 
 module.exports = router;

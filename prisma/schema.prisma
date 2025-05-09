@@ -40,6 +40,7 @@ model User {
   linkedinUrl    String?
   twitterUrl     String?
   webProfile     String?
+  displayOrder   Int       @default(0)
   uid            String?   //@unique see later
   description    String?   @db.Text
   note           String?   @db.VarChar(500)
@@ -56,8 +57,9 @@ model User {
   EventReport    EventReport[]
   EventRSVP      EventRSVP[]
   EventInvite    EventInvite[]
-
-  Session Session[]
+  Session        Session[]
+  sponsors       Sponsor[]       @relation("SponsorPerson")
+  exhibitors     Exhibitor[]     @relation("ExhibitorPerson")
 }
 
 model EventCategory {
@@ -227,6 +229,7 @@ model SponsorType {
   eventId Int
   event   Event     @relation(fields: [eventId], references: [id])
   Session Session[]
+  sponsors Sponsor[] // Added relation for sponsors
 }
 
 model ExhibitorType {
@@ -240,6 +243,9 @@ model ExhibitorType {
   // Relation to Event
   eventId Int
   event   Event @relation(fields: [eventId], references: [id])
+  
+  // Relation to Exhibitors
+  exhibitors Exhibitor[]
 }
 
 model SessionType {
@@ -317,4 +323,78 @@ model AwardedPerson {
   event     Event     @relation(fields: [eventId], references: [id])
   session   Session   @relation(fields: [sessionId], references: [id])
   awardType AwardType @relation(fields: [awardId], references: [id])
+}
+
+model Sponsor {
+  id              Int      @id @default(autoincrement())
+  name            String
+  website         String?
+  aboutCompany    String?  @db.VarChar(500)
+  facebookPageUrl String?
+  linkedinPageUrl String?
+  twitterPageUrl  String?
+  youtubeUrl      String?
+  logo            String?
+  displayOrder    Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  sponsorTypeId Int
+  sponsorType   SponsorType @relation(fields: [sponsorTypeId], references: [id])
+
+  // Many-to-many relation with User
+  sponsorPerson User[] @relation("SponsorPerson")
+
+  // Documents array
+  documents SponsorDocument[]
+}
+
+model SponsorDocument {
+  id        Int      @id @default(autoincrement())
+  name      String
+  url       String
+  createdAt DateTime @default(now())
+
+  // Relation to Sponsor
+  sponsorId Int
+  sponsor   Sponsor @relation(fields: [sponsorId], references: [id])
+}
+
+model Exhibitor {
+  id              Int      @id @default(autoincrement())
+  name            String
+  website         String
+  stall           String?
+  location        String?  // city
+  aboutCompany    String?  @db.VarChar(500)
+  email           String?
+  phone           String?
+  facebookPageUrl String?
+  linkedinPageUrl String?
+  twitterPageUrl  String?
+  logo            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  exhibitorTypeId Int
+  exhibitorType   ExhibitorType @relation(fields: [exhibitorTypeId], references: [id])
+
+  // Many-to-many relation with User
+  exhibitorPersons User[] @relation("ExhibitorPerson")
+
+  // Documents array
+  documents ExhibitorDocument[]
+}
+
+model ExhibitorDocument {
+  id        Int      @id @default(autoincrement())
+  name      String
+  url       String
+  createdAt DateTime @default(now())
+
+  // Relation to Exhibitor
+  exhibitorId Int
+  exhibitor   Exhibitor @relation(fields: [exhibitorId], references: [id])
 }
