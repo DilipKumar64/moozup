@@ -49,4 +49,13 @@ const getGroupById = async (groupId) => {
   return group;
 };
 
-module.exports = { createGroupWithImages, getGroupById };
+const findAllGroup = () => prisma.galleryGroup.findMany({
+     include: {
+      galleryItems: true,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+});
+
+module.exports = { createGroupWithImages, getGroupById,findAllGroup };

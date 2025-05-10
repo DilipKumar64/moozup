@@ -10,6 +10,8 @@ const directoryRoutes = require("./src/routes/directory.routes");
 const agendaRoures = require("./src/routes/agenda.route");
 const galleryRoutes = require("./src/routes/gallery.routes"); // Uncomment if you have a gallery route
 const groupRoutes = require("./src/routes/group.routes"); // Uncomment if you have a group route
+const publicationItemRoutes = require("./src/routes/publication.routes"); // Uncomment if you have a publication item route
+const publicationGroupsRoutes = require("./src/routes/publictionGroup.routes"); // Uncomment if you have a publication group route
 const app = express();
 
 // Middleware
@@ -26,6 +28,8 @@ app.use("/api/directory", directoryRoutes);
 app.use("/api/agenda", agendaRoures);
 app.use("/api/gallery", galleryRoutes); // Uncomment if you have a gallery route 
 app.use("/api/group", groupRoutes); // Uncomment if you have a group route
+app.use('/api/publicationItem',publicationItemRoutes); // Uncomment if you have a publication item route
+app.use("/api/publicationGroup",publicationGroupsRoutes)
 
 // Health check route
 app.get("/", (req, res) => {

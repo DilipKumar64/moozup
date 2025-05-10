@@ -1,10 +1,8 @@
 const e = require("express");
-const { createGroupWithImages, getGroupById } = require("../models/group.model");
+const { createGroupWithImages, getGroupById, findAllGroup } = require("../models/group.model");
 
 exports.createNewGroup = async (req, res) => {
   const { name, galleryItems } = req.body;
-
-  console.log("=>>>>>>>>>",name, galleryItems);
 
 
   try {
@@ -23,6 +21,16 @@ exports.getGroup = async (req, res) => {
   try {
     const group = await getGroupById(groupId); // Fetch group details by ID
     return res.json(group);  // Send the group data as JSON response
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: error.message }); // Send error response if something goes wrong
+  }
+};
+
+exports.getAllGroups = async (req, res) => {
+  try {
+    const groups = await findAllGroup(); // Fetch all groups
+    return res.json(groups); // Send the groups data as JSON response
   } catch (error) {
     console.log(error);
     return res.status(500).json({ message: error.message }); // Send error response if something goes wrong
