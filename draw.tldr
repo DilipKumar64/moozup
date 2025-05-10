@@ -16,3 +16,14 @@ git add .
 git rebase --continue
 git push origin [your_branch] -f
 // create pull request from GitHub manually
+
+
+
+
+primsa migration generate commond 
+
+npx prisma migrate dev --name update-group-model
+
+
+deploy commond =>
+npx prisma migrate deploy

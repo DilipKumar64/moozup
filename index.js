@@ -8,7 +8,8 @@ const userRoutes = require("./src/routes/user.routes");
 const eventCategoryRoutes = require("./src/routes/eventCategory.route");
 const directoryRoutes = require("./src/routes/directory.routes");
 const agendaRoures = require("./src/routes/agenda.route");
-
+const galleryRoutes = require("./src/routes/gallery.routes"); // Uncomment if you have a gallery route
+const groupRoutes = require("./src/routes/group.routes"); // Uncomment if you have a group route
 const app = express();
 
 // Middleware
@@ -23,6 +24,8 @@ app.use("/api/events", eventApiRoutes);
 app.use("/api/category", eventCategoryRoutes);
 app.use("/api/directory", directoryRoutes);
 app.use("/api/agenda", agendaRoures);
+app.use("/api/gallery", galleryRoutes); // Uncomment if you have a gallery route 
+app.use("/api/group", groupRoutes); // Uncomment if you have a group route
 
 // Health check route
 app.get("/", (req, res) => {
