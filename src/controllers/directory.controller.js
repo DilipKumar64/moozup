@@ -2078,3 +2078,59 @@ exports.deleteExhibitor = async (req, res) => {
     });
   }
 };
+
+exports.updateParticipationTypeAttribute = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { attribute, value } = req.body;
+
+    // Validate attribute name
+    const validAttributes = [
+      'canVideo',
+      'canImage',
+      'canDocument',
+      'canMessage',
+      'canChat',
+      'canAsk'
+    ];
+
+    if (!validAttributes.includes(attribute)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid attribute name'
+      });
+    }
+
+    // Validate value is boolean
+    if (typeof value !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'Value must be a boolean'
+      });
+    }
+
+    const participationType = await findParticipationTypeById(id);
+    if (!participationType) {
+      return res.status(404).json({
+        success: false,
+        message: 'Participation type not found'
+      });
+    }
+
+    const updatedParticipationType = await updateParticipationType(id, {
+      [attribute]: value
+    });
+
+    res.json({
+      success: true,
+      data: updatedParticipationType
+    });
+  } catch (error) {
+    console.error('Error updating participation type attribute:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating participation type attribute',
+      error: error.message
+    });
+  }
+};

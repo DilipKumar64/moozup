@@ -230,6 +230,12 @@ model ParticipationType {
   priority                Int      @default(0)
   isVisibleInApp          Boolean  @default(true)
   isAllowedInEvent        Boolean  @default(true)
+  canVideo                Boolean  @default(true)
+  canImage                Boolean  @default(true)
+  canDocument             Boolean  @default(true)
+  canMessage              Boolean  @default(true)
+  canChat                 Boolean  @default(true)
+  canAsk                  Boolean  @default(true)
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 

@@ -46,7 +46,8 @@ const {
   createParticipationTypeSetting,
   updateParticipationTypeSetting,
   getParticipationTypeSettings,
-  deleteParticipationTypeSetting
+  deleteParticipationTypeSetting,
+  updateParticipationTypeAttribute
 } = require('../controllers/directory.controller');
 const uploadFields = require("../middlewares/upload.middleware2");
 
@@ -63,6 +64,7 @@ router.post('/participation-type-settings', authenticateJWT, createParticipation
 router.put('/participation-type-settings/:id', authenticateJWT, updateParticipationTypeSetting);
 router.get('/participation-type-settings/event/:eventId', authenticateJWT, getParticipationTypeSettings);
 router.delete('/participation-type-settings/:id', authenticateJWT, deleteParticipationTypeSetting);
+router.patch('/participation-types/:id/attribute', authenticateJWT, updateParticipationTypeAttribute);
 
 // Sponsor Type Routes
 router.post('/sponsor-types', authenticateJWT, createSponsorType);
