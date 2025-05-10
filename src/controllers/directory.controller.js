@@ -52,6 +52,16 @@ const { sendWelcomeEmail, sendPasswordEmail } = require('../utils/mailer');
 const bcrypt = require('bcrypt');
 const { createSponsor, findSponsorById, updateSponsor, addSponsorPersons, addSponsorDocument, deleteSponsor, bulkUpdateSponsorDisplayOrder, updateSponsorDisplayOrder, getAllSponsors } = require('../models/sponsor.model');
 
+const {
+  createParticipationTypeSetting,
+  findParticipationTypeSettingById,
+  findParticipationTypeSettingsByEventId,
+  findParticipationTypeSettingByTypes,
+  updateParticipationTypeSetting,
+  deleteParticipationTypeSetting,
+  deleteSettingsByParticipationTypeId
+} = require('../models/participation.type.setting.model');
+
 const isIdValid = (id) => {
   return !isNaN(parseInt(id)) && parseInt(id) > 0;
 };
@@ -174,6 +184,7 @@ exports.createParticipationType = async (req, res) => {
   }
 
   try {
+    // Create the new participation type
     const participationType = await createParticipationType({
       personParticipationType,
       groupParticipationName,
@@ -183,9 +194,52 @@ exports.createParticipationType = async (req, res) => {
       eventId: parseInt(eventId)
     });
 
+    // Get all existing participation types for this event
+    const existingParticipationTypes = await findParticipationTypesByEventId(eventId);
+
+    // Filter out the newly created participation type from existing types
+    const otherParticipationTypes = existingParticipationTypes.filter(
+      type => type.id !== participationType.id
+    );
+
+    // Generate settings for the new participation type with all other types
+    const settingsPromises = otherParticipationTypes.map(async (existingType) => {
+      const settings = [];
+
+      // Create setting for new type -> existing type
+      settings.push(createParticipationTypeSetting({
+        eventId: parseInt(eventId),
+        sourceTypeId: participationType.id,
+        targetTypeId: existingType.id
+      }));
+
+      // Create setting for existing type -> new type
+      settings.push(createParticipationTypeSetting({
+        eventId: parseInt(eventId),
+        sourceTypeId: existingType.id,
+        targetTypeId: participationType.id
+      }));
+
+      return Promise.all(settings);
+    });
+
+    // Wait for all settings to be created
+    const createdSettings = await Promise.all(settingsPromises);
+
+    // Create self-interaction setting for the new type
+    const selfSetting = await createParticipationTypeSetting({
+      eventId: parseInt(eventId),
+      sourceTypeId: participationType.id,
+      targetTypeId: participationType.id
+    });
+
+    // Add self-setting to the response
+    const allSettings = [...createdSettings.flat(), selfSetting];
+
     res.status(201).json({
-      message: "Participation type created successfully",
-      participationType
+      message: "Participation type created successfully with interaction settings",
+      participationType,
+      settings: allSettings
     });
   } catch (error) {
     console.error("Create participation type error:", error);
@@ -235,15 +289,20 @@ exports.deleteParticipationType = async (req, res) => {
   }
 
   try {
+    // Check if participation type exists
     const existingType = await findParticipationTypeById(id);
     if (!existingType) {
       return res.status(404).json({ message: "Participation type not found" });
     }
 
+    // Delete all settings where this participation type is either source or target
+    await deleteSettingsByParticipationTypeId(id);
+
+    // Delete the participation type
     await deleteParticipationType(id);
 
     res.status(200).json({
-      message: "Participation type deleted successfully"
+      message: "Participation type and associated settings deleted successfully"
     });
   } catch (error) {
     console.error("Delete participation type error:", error);
@@ -328,6 +387,150 @@ exports.getParticipationTypesByEvent = async (req, res) => {
   } catch (error) {
     console.error("Get participation types error:", error);
     res.status(500).json({ message: "Something went wrong", error: error.message });
+  }
+};
+
+// Participation Type Settings Controllers
+exports.createParticipationTypeSetting = async (req, res) => {
+  const {
+    eventId,
+    sourceTypeId,
+    targetTypeId,
+    canViewProfile,
+    canScheduleMeeting,
+    canSendMessage
+  } = req.body;
+
+  // Validate required fields
+  if (!eventId || !sourceTypeId || !targetTypeId) {
+    return res.status(400).json({
+      message: "Missing required fields. Required fields are: eventId, sourceTypeId, targetTypeId"
+    });
+  }
+
+  try {
+    // Check if both participation types exist
+    const sourceType = await findParticipationTypeById(sourceTypeId);
+    const targetType = await findParticipationTypeById(targetTypeId);
+
+    if (!sourceType || !targetType) {
+      return res.status(404).json({
+        message: "One or both participation types not found"
+      });
+    }
+
+    // Check if setting already exists
+    const existingSetting = await findParticipationTypeSettingByTypes(eventId, sourceTypeId, targetTypeId);
+    if (existingSetting) {
+      return res.status(400).json({
+        message: "Setting already exists for these participation types"
+      });
+    }
+
+    // Create the setting
+    const setting = await createParticipationTypeSetting({
+      eventId: parseInt(eventId),
+      sourceTypeId: parseInt(sourceTypeId),
+      targetTypeId: parseInt(targetTypeId),
+      canViewProfile,
+      canScheduleMeeting,
+      canSendMessage
+    });
+
+    res.status(201).json({
+      message: "Participation type setting created successfully",
+      setting
+    });
+  } catch (error) {
+    console.error("Create participation type setting error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.updateParticipationTypeSetting = async (req, res) => {
+  const { id } = req.params;
+  const {
+    canViewProfile,
+    canScheduleMeeting,
+    canSendMessage
+  } = req.body;
+
+  try {
+    // Check if setting exists
+    const existingSetting = await findParticipationTypeSettingById(id);
+    if (!existingSetting) {
+      return res.status(404).json({
+        message: "Participation type setting not found"
+      });
+    }
+
+    // Update the setting
+    const updatedSetting = await updateParticipationTypeSetting(id, {
+      canViewProfile: canViewProfile !== undefined ? canViewProfile : existingSetting.canViewProfile,
+      canScheduleMeeting: canScheduleMeeting !== undefined ? canScheduleMeeting : existingSetting.canScheduleMeeting,
+      canSendMessage: canSendMessage !== undefined ? canSendMessage : existingSetting.canSendMessage
+    });
+
+    res.status(200).json({
+      message: "Participation type setting updated successfully",
+      setting: updatedSetting
+    });
+  } catch (error) {
+    console.error("Update participation type setting error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.getParticipationTypeSettings = async (req, res) => {
+  const { eventId } = req.params;
+
+  try {
+    // Get all settings for the event
+    const settings = await findParticipationTypeSettingsByEventId(eventId);
+
+    res.status(200).json({
+      message: "Participation type settings retrieved successfully",
+      settings
+    });
+  } catch (error) {
+    console.error("Get participation type settings error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.deleteParticipationTypeSetting = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Check if setting exists
+    const existingSetting = await findParticipationTypeSettingById(id);
+    if (!existingSetting) {
+      return res.status(404).json({
+        message: "Participation type setting not found"
+      });
+    }
+
+    // Delete the setting
+    await deleteParticipationTypeSetting(id);
+
+    res.status(200).json({
+      message: "Participation type setting deleted successfully"
+    });
+  } catch (error) {
+    console.error("Delete participation type setting error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
   }
 };
 
@@ -1871,6 +2074,62 @@ exports.deleteExhibitor = async (req, res) => {
     console.error("Delete exhibitor error:", error);
     res.status(500).json({
       message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.updateParticipationTypeAttribute = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { attribute, value } = req.body;
+
+    // Validate attribute name
+    const validAttributes = [
+      'canVideo',
+      'canImage',
+      'canDocument',
+      'canMessage',
+      'canChat',
+      'canAsk'
+    ];
+
+    if (!validAttributes.includes(attribute)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid attribute name'
+      });
+    }
+
+    // Validate value is boolean
+    if (typeof value !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'Value must be a boolean'
+      });
+    }
+
+    const participationType = await findParticipationTypeById(id);
+    if (!participationType) {
+      return res.status(404).json({
+        success: false,
+        message: 'Participation type not found'
+      });
+    }
+
+    const updatedParticipationType = await updateParticipationType(id, {
+      [attribute]: value
+    });
+
+    res.json({
+      success: true,
+      data: updatedParticipationType
+    });
+  } catch (error) {
+    console.error('Error updating participation type attribute:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating participation type attribute',
       error: error.message
     });
   }
