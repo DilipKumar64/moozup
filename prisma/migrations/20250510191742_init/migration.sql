@@ -23,6 +23,17 @@ CREATE TABLE "User" (
     "country" TEXT,
     "followersCount" INTEGER NOT NULL DEFAULT 0,
     "followingCount" INTEGER NOT NULL DEFAULT 0,
+    "companyName" TEXT,
+    "jobTitle" TEXT,
+    "facebookUrl" TEXT,
+    "linkedinUrl" TEXT,
+    "twitterUrl" TEXT,
+    "webProfile" TEXT,
+    "displayOrder" INTEGER NOT NULL DEFAULT 0,
+    "uid" TEXT,
+    "description" TEXT,
+    "note" VARCHAR(500),
+    "participationTypeId" INTEGER,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -233,6 +244,137 @@ CREATE TABLE "AwardedPerson" (
     CONSTRAINT "AwardedPerson_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "Sponsor" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "website" TEXT,
+    "aboutCompany" VARCHAR(500),
+    "facebookPageUrl" TEXT,
+    "linkedinPageUrl" TEXT,
+    "twitterPageUrl" TEXT,
+    "youtubeUrl" TEXT,
+    "logo" TEXT,
+    "displayOrder" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "sponsorTypeId" INTEGER NOT NULL,
+
+    CONSTRAINT "Sponsor_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "SponsorDocument" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "sponsorId" INTEGER NOT NULL,
+
+    CONSTRAINT "SponsorDocument_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Exhibitor" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "website" TEXT NOT NULL,
+    "stall" TEXT,
+    "location" TEXT,
+    "aboutCompany" VARCHAR(500),
+    "email" TEXT,
+    "phone" TEXT,
+    "facebookPageUrl" TEXT,
+    "linkedinPageUrl" TEXT,
+    "twitterPageUrl" TEXT,
+    "logo" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "exhibitorTypeId" INTEGER NOT NULL,
+
+    CONSTRAINT "Exhibitor_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ExhibitorDocument" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "exhibitorId" INTEGER NOT NULL,
+
+    CONSTRAINT "ExhibitorDocument_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "GalleryGroup" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "GalleryGroup_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "GalleryItem" (
+    "id" SERIAL NOT NULL,
+    "imagelabel" TEXT,
+    "Videolabel" TEXT,
+    "imageUrl" TEXT,
+    "videoUrl" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "groupId" INTEGER,
+    "eventId" INTEGER NOT NULL,
+    "userId" INTEGER NOT NULL,
+
+    CONSTRAINT "GalleryItem_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "staticContent" (
+    "id" SERIAL NOT NULL,
+    "content" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "FAQs" TEXT,
+    "EventInfo" TEXT,
+    "Questionnaire" TEXT,
+    "StaticContent1" TEXT,
+    "StaticContent2" TEXT,
+    "StaticContent3" TEXT,
+    "StaticContent4" TEXT,
+    "StaticContent5" TEXT,
+    "StaticContent6" TEXT,
+    "StaticContent7" TEXT,
+    "NonMenuStaticContent1" TEXT,
+    "NonMenuStaticContent2" TEXT,
+    "NonMenuStaticContent3" TEXT,
+    "NonMenuStaticContent4" TEXT,
+    "NonMenuStaticContent5" TEXT,
+    "eventId" INTEGER NOT NULL,
+    "userId" INTEGER NOT NULL,
+
+    CONSTRAINT "staticContent_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "_SponsorPerson" (
+    "A" INTEGER NOT NULL,
+    "B" INTEGER NOT NULL,
+
+    CONSTRAINT "_SponsorPerson_AB_pkey" PRIMARY KEY ("A","B")
+);
+
+-- CreateTable
+CREATE TABLE "_ExhibitorPerson" (
+    "A" INTEGER NOT NULL,
+    "B" INTEGER NOT NULL,
+
+    CONSTRAINT "_ExhibitorPerson_AB_pkey" PRIMARY KEY ("A","B")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -250,6 +392,15 @@ CREATE UNIQUE INDEX "SessionType_sessionname_key" ON "SessionType"("sessionname"
 
 -- CreateIndex
 CREATE UNIQUE INDEX "AwardType_awardType_key" ON "AwardType"("awardType");
+
+-- CreateIndex
+CREATE INDEX "_SponsorPerson_B_index" ON "_SponsorPerson"("B");
+
+-- CreateIndex
+CREATE INDEX "_ExhibitorPerson_B_index" ON "_ExhibitorPerson"("B");
+
+-- AddForeignKey
+ALTER TABLE "User" ADD CONSTRAINT "User_participationTypeId_fkey" FOREIGN KEY ("participationTypeId") REFERENCES "ParticipationType"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Event" ADD CONSTRAINT "Event_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -331,3 +482,42 @@ ALTER TABLE "AwardedPerson" ADD CONSTRAINT "AwardedPerson_sessionId_fkey" FOREIG
 
 -- AddForeignKey
 ALTER TABLE "AwardedPerson" ADD CONSTRAINT "AwardedPerson_awardId_fkey" FOREIGN KEY ("awardId") REFERENCES "AwardType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Sponsor" ADD CONSTRAINT "Sponsor_sponsorTypeId_fkey" FOREIGN KEY ("sponsorTypeId") REFERENCES "SponsorType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SponsorDocument" ADD CONSTRAINT "SponsorDocument_sponsorId_fkey" FOREIGN KEY ("sponsorId") REFERENCES "Sponsor"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Exhibitor" ADD CONSTRAINT "Exhibitor_exhibitorTypeId_fkey" FOREIGN KEY ("exhibitorTypeId") REFERENCES "ExhibitorType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ExhibitorDocument" ADD CONSTRAINT "ExhibitorDocument_exhibitorId_fkey" FOREIGN KEY ("exhibitorId") REFERENCES "Exhibitor"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "GalleryItem" ADD CONSTRAINT "GalleryItem_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "GalleryGroup"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "GalleryItem" ADD CONSTRAINT "GalleryItem_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "GalleryItem" ADD CONSTRAINT "GalleryItem_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "staticContent" ADD CONSTRAINT "staticContent_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "staticContent" ADD CONSTRAINT "staticContent_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_SponsorPerson" ADD CONSTRAINT "_SponsorPerson_A_fkey" FOREIGN KEY ("A") REFERENCES "Sponsor"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_SponsorPerson" ADD CONSTRAINT "_SponsorPerson_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_ExhibitorPerson" ADD CONSTRAINT "_ExhibitorPerson_A_fkey" FOREIGN KEY ("A") REFERENCES "Exhibitor"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_ExhibitorPerson" ADD CONSTRAINT "_ExhibitorPerson_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

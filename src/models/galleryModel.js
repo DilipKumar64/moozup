@@ -17,9 +17,9 @@ const createGalleryItem = async ({
       Videolabel,
       imageUrl,
       videoUrl,
-      groupId,
-      eventId,
-      userId,
+      groupId: parseInt(groupId),
+      eventId: parseInt(eventId),
+      userId: parseInt(userId),
     },
   });
 };

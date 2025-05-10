@@ -34,16 +34,16 @@ model User {
   reports        Report[]  @relation("UserReports")
 
   // New fields addd when creating add people in directory
-  companyName    String?
-  jobTitle       String?
-  facebookUrl    String?
-  linkedinUrl    String?
-  twitterUrl     String?
-  webProfile     String?
-  displayOrder   Int       @default(0)
-  uid            String?   //@unique see later
-  description    String?   @db.Text
-  note           String?   @db.VarChar(500)
+  companyName         String?
+  jobTitle            String?
+  facebookUrl         String?
+  linkedinUrl         String?
+  twitterUrl          String?
+  webProfile          String?
+  displayOrder        Int                @default(0)
+  uid                 String? //@unique see later
+  description         String?            @db.Text
+  note                String?            @db.VarChar(500)
   participationTypeId Int?
   participationType   ParticipationType? @relation(fields: [participationTypeId], references: [id])
 
@@ -61,8 +61,9 @@ model User {
   sponsors       Sponsor[]       @relation("SponsorPerson")
   exhibitors     Exhibitor[]     @relation("ExhibitorPerson")
 
-  GalleryItem   GalleryItem[]
-  staticContent staticContent[]
+  GalleryItem      GalleryItem[]
+  staticContent    staticContent[]
+  PublicationsItem PublicationsItem[]
 }
 
 model EventCategory {
@@ -119,6 +120,7 @@ model Event {
   galleryItems       GalleryItem[] // Added relation for gallery items
   staticContent      staticContent[]
   participationTypeSettings ParticipationTypeSetting[] // Added relation for participation type settings
+  PublicationsItem   PublicationsItem[]
 }
 
 model EventAttendee {
@@ -261,9 +263,9 @@ model SponsorType {
   updatedAt DateTime @updatedAt
 
   // Relation to Event
-  eventId Int
-  event   Event     @relation(fields: [eventId], references: [id])
-  Session Session[]
+  eventId  Int
+  event    Event     @relation(fields: [eventId], references: [id])
+  Session  Session[]
   sponsors Sponsor[] // Added relation for sponsors
 }
 
@@ -278,7 +280,7 @@ model ExhibitorType {
   // Relation to Event
   eventId Int
   event   Event @relation(fields: [eventId], references: [id])
-  
+
   // Relation to Exhibitors
   exhibitors Exhibitor[]
 }
@@ -401,7 +403,7 @@ model Exhibitor {
   name            String
   website         String
   stall           String?
-  location        String?  // city
+  location        String? // city
   aboutCompany    String?  @db.VarChar(500)
   email           String?
   phone           String?
@@ -432,7 +434,6 @@ model ExhibitorDocument {
   // Relation to Exhibitor
   exhibitorId Int
   exhibitor   Exhibitor @relation(fields: [exhibitorId], references: [id])
-
 }
 
 model GalleryGroup {
@@ -489,4 +490,30 @@ model staticContent {
   // Relation to User
   userId  Int
   user    User  @relation(fields: [userId], references: [id])
+}
+
+model PublicationsGroup {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  order     Int      @default(0)
+
+  // galleryItems GalleryItem[]
+  PublicationsItem PublicationsItem[]
+}
+
+model PublicationsItem {
+  id        Int      @id @default(autoincrement())
+  message   String? // text field (Enter Message)
+  fileUrl   String? // uploaded file (can be image, pdf, doc etc.)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  publicationsGroup      PublicationsGroup? @relation(fields: [publicationsGroupId], references: [id])
+  publicationsGroupId  Int? // Changed to `Int?` to match `GalleryGroup`'s `id` field type
+  eventId Int
+  event   Event              @relation(fields: [eventId], references: [id])
+  userId  Int
+  user    User               @relation(fields: [userId], references: [id])
 }
