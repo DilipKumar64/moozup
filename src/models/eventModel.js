@@ -24,7 +24,6 @@ const findEventById = (id) => {
 
 // Update event by ID
 const updateEventById = (id, data) => {
-
   if (data.creatorId) data.creatorId = Number(data.creatorId);
   if (data.categoryId) data.categoryId = Number(data.categoryId);
   if (data.userId) data.userId = Number(data.userId);
@@ -178,6 +177,57 @@ const getAttendees = async (eventId) => {
   return attendees;
 };
 
+// Static Page Models
+
+const allowedFields = [
+  "FAQs",
+  "EventInfo",
+  "Questionnaire",
+  "StaticContent1",
+  "StaticContent2",
+  "StaticContent3",
+  "StaticContent4",
+  "StaticContent5",
+  "StaticContent6",
+  "StaticContent7",
+  "NonMenuStaticContent1",
+  "NonMenuStaticContent2",
+  "NonMenuStaticContent3",
+  "NonMenuStaticContent4",
+  "NonMenuStaticContent5",
+];
+
+// 🧠 Common function with internal validation
+const createStaticContent = async (field,value,eventId,userId) => {
+  // ✅ Check if field is allowed
+  if (!allowedFields.includes(field)) {
+    throw new Error(`Field "${field}" is not allowed.`);
+  }
+
+  // only valid fields are passed in body
+  // const allowedKeys = [field, "eventId", "userId"];
+  // const extraKeys = Object.keys(reqBody).filter(
+  //   (key) => !allowedKeys.includes(key)
+  // );
+
+  // if (extraKeys.length > 0) {
+  //   throw new Error(`Invalid fields in request: ${extraKeys.join(", ")}`);
+  // }
+
+  return await prisma.staticContent.create({
+    data: {
+      [field]: value,
+      eventId,
+      userId,
+    },
+    select: {
+      id: true, // id of the full staticContent row
+      [field]: true,
+      eventId,
+      userId, // only that field (e.g., FAQs)
+    },
+  });
+};
 
 module.exports = {
   createEvent,
@@ -191,4 +241,5 @@ module.exports = {
   reportEvent,
   rsvpToEvent,
   getAttendees,
+  createStaticContent,
 };

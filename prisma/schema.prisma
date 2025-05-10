@@ -32,7 +32,7 @@ model User {
   followersCount Int       @default(0)
   followingCount Int       @default(0)
   reports        Report[]  @relation("UserReports")
-  
+
   // New fields addd when creating add people in directory
   companyName    String?
   jobTitle       String?
@@ -45,7 +45,7 @@ model User {
   description    String?   @db.Text
   note           String?   @db.VarChar(500)
   participationTypeId Int?
-  participationType ParticipationType? @relation(fields: [participationTypeId], references: [id])
+  participationType   ParticipationType? @relation(fields: [participationTypeId], references: [id])
 
   events         Event[]
   // joinedEvents JoinEvent[]
@@ -60,6 +60,9 @@ model User {
   Session        Session[]
   sponsors       Sponsor[]       @relation("SponsorPerson")
   exhibitors     Exhibitor[]     @relation("ExhibitorPerson")
+
+  GalleryItem   GalleryItem[]
+  staticContent staticContent[]
 }
 
 model EventCategory {
@@ -113,6 +116,8 @@ model Event {
   Session            Session[]
   AwardType          AwardType[]
   AwardedPerson      AwardedPerson[]
+  galleryItems       GalleryItem[] // Added relation for gallery items
+  staticContent      staticContent[]
 }
 
 model EventAttendee {
@@ -212,9 +217,9 @@ model ParticipationType {
   eventId Int
   event   Event     @relation(fields: [eventId], references: [id])
   Session Session[]
-  
+
   // Relation to User
-  users                 User[]
+  users User[]
 }
 
 model SponsorType {
@@ -397,4 +402,61 @@ model ExhibitorDocument {
   // Relation to Exhibitor
   exhibitorId Int
   exhibitor   Exhibitor @relation(fields: [exhibitorId], references: [id])
+
+}
+
+model GalleryGroup {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  galleryItems GalleryItem[]
+}
+
+model GalleryItem {
+  id         Int      @id @default(autoincrement())
+  imagelabel String?
+  Videolabel String?
+  imageUrl   String?
+  videoUrl   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  group   GalleryGroup? @relation(fields: [groupId], references: [id])
+  groupId Int? // Changed to `Int?` to match `GalleryGroup`'s `id` field type
+  eventId Int
+  event   Event         @relation(fields: [eventId], references: [id])
+  userId  Int
+  user    User          @relation(fields: [userId], references: [id])
+}
+
+model staticContent {
+  id        Int      @id @default(autoincrement())
+  content   String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  FAQs                  String? @db.Text
+  EventInfo             String? @db.Text
+  Questionnaire         String? @db.Text
+  StaticContent1        String? @db.Text
+  StaticContent2        String? @db.Text
+  StaticContent3        String? @db.Text
+  StaticContent4        String? @db.Text
+  StaticContent5        String? @db.Text
+  StaticContent6        String? @db.Text
+  StaticContent7        String? @db.Text
+  NonMenuStaticContent1 String? @db.Text
+  NonMenuStaticContent2 String? @db.Text
+  NonMenuStaticContent3 String? @db.Text
+  NonMenuStaticContent4 String? @db.Text
+  NonMenuStaticContent5 String? @db.Text
+
+  // Relation to Event
+  eventId Int
+  event   Event @relation(fields: [eventId], references: [id])
+  // Relation to User
+  userId  Int
+  user    User  @relation(fields: [userId], references: [id])
 }

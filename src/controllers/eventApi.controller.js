@@ -12,6 +12,7 @@ const {
   reportEvent,
   rsvpToEvent,
   getAttendees,
+  createStaticContent,
 } = require("../models/eventModel"); // Import model function
 const uploadToSupabase = require("../utils/uploadToSupabase");
 
@@ -389,5 +390,324 @@ exports.listAttendees = async (req, res) => {
       message: "An error occurred while fetching the attendees.",
       error: error.message,
     });
+  }
+};
+
+exports.createFAQs = async (req, res) => {
+  try {
+    const { FAQs, eventId, userId } = req.body;
+    if (!FAQs || !eventId || !userId) {
+      return res
+        .status(400)
+        .json({ error: "FAQs, eventId, and userId are required" });
+    }
+    const result = await createStaticContent("FAQs", FAQs, eventId, userId);
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createEventInfo = async (req, res) => {
+  try {
+    const { EventInfo, eventId, userId } = req.body;
+    if (!EventInfo || !eventId || !userId) {
+      return res
+        .status(400)
+        .json({ error: "EventInfo, eventId, and userId are required" });
+    }
+    const result = await createStaticContent(
+      "EventInfo",
+      EventInfo,
+      eventId,
+      userId,
+      req.body
+    );
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createQuestionnaire = async (req, res) => {
+  try {
+    const { Questionnaire, eventId, userId } = req.body;
+    if (!Questionnaire || !eventId || !userId) {
+      return res
+        .status(400)
+        .json({ error: "Questionnaire, eventId, and userId are required" });
+    }
+    const result = await createStaticContent(
+      "Questionnaire",
+      Questionnaire,
+      eventId,
+      userId,
+      req.body
+    );
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createStaticContent1 = async (req, res) => {
+  try {
+    const { StaticContent1, eventId, userId } = req.body;
+    if (!StaticContent1 || !eventId || !userId) {
+      return res
+        .status(400)
+        .json({ error: "StaticContent1, eventId, and userId are required" });
+    }
+    const result = await createStaticContent(
+      "StaticContent1",
+      StaticContent1,
+      eventId,
+      userId,
+      req.body
+    );
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createStaticContent2 = async (req, res) => {
+  try {
+    const { StaticContent2, eventId, userId } = req.body;
+    if (!StaticContent2 || !eventId || !userId) {
+      return res
+        .status(400)
+        .json({ error: "StaticContent2, eventId, and userId are required" });
+    }
+    const result = await createStaticContent(
+      "StaticContent2",
+      StaticContent2,
+      eventId,
+      userId,
+      req.body
+    );
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createStaticContent3 = async (req, res) => {
+  try {
+    const { StaticContent3, eventId, userId } = req.body;
+    if (!StaticContent3 || !eventId || !userId) {
+      return res
+        .status(400)
+        .json({ error: "StaticContent3, eventId, and userId are required" });
+    }
+    const result = await createStaticContent(
+      "StaticContent3",
+      StaticContent3,
+      eventId,
+      userId,
+      req.body
+    );
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createStaticContent4 = async (req, res) => {
+  try {
+    const { StaticContent4, eventId, userId } = req.body;
+    if (!StaticContent4 || !eventId || !userId) {
+      return res
+        .status(400)
+        .json({ error: "StaticContent4, eventId, and userId are required" });
+    }
+    const result = await createStaticContent(
+      "StaticContent4",
+      StaticContent4,
+      eventId,
+      userId,
+      req.body
+    );
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createStaticContent5 = async (req, res) => {
+  try {
+    const { StaticContent5, eventId, userId } = req.body;
+    if (!StaticContent5 || !eventId || !userId) {
+      return res
+        .status(400)
+        .json({ error: "StaticContent5, eventId, and userId are required" });
+    }
+    const result = await createStaticContent(
+      "StaticContent5",
+      StaticContent5,
+      eventId,
+      userId,
+      req.body
+    );
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createStaticContent6 = async (req, res) => {
+  try {
+    const { StaticContent6, eventId, userId } = req.body;
+    if (!StaticContent6 || !eventId || !userId) {
+      return res
+        .status(400)
+        .json({ error: "StaticContent6, eventId, and userId are required" });
+    }
+    const result = await createStaticContent(
+      "StaticContent6",
+      StaticContent6,
+      eventId,
+      userId,
+      req.body
+    );
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createStaticContent7 = async (req, res) => {
+  try {
+    const { StaticContent7, eventId, userId } = req.body;
+    if (!StaticContent7 || !eventId || !userId) {
+      return res
+        .status(400)
+        .json({ error: "StaticContent7, eventId, and userId are required" });
+    }
+    const result = await createStaticContent(
+      "StaticContent7",
+      StaticContent7,
+      eventId,
+      userId,
+      req.body
+    );
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.NonMenuStaticContent1 = async (req, res) => {
+  try {
+    const { NonMenuStaticContent1, eventId, userId } = req.body;
+    const result = await createStaticContent(
+      "NonMenuStaticContent1",
+      NonMenuStaticContent1,
+      eventId,
+      userId,
+      req.body
+    );
+    if (!NonMenuStaticContent1 || !eventId || !userId) {
+      return res
+        .status(400)
+        .json({
+          error: "NonMenuStaticContent1, eventId, and userId are required",
+        });
+    }
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.NonMenuStaticContent2 = async (req, res) => {
+  try {
+    const { NonMenuStaticContent2, eventId, userId } = req.body;
+    const result = await createStaticContent(
+      "NonMenuStaticContent2",
+      NonMenuStaticContent2,
+      eventId,
+      userId,
+      req.body
+    );
+    if (!NonMenuStaticContent2 || !eventId || !userId) {
+      return res
+        .status(400)
+        .json({
+          error: "NonMenuStaticContent2, eventId, and userId are required",
+        });
+    }
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.NonMenuStaticContent3 = async (req, res) => {
+  try {
+    const { NonMenuStaticContent3, eventId, userId } = req.body;
+    const result = await createStaticContent(
+      "NonMenuStaticContent3",
+      NonMenuStaticContent3,
+      eventId,
+      userId,
+      req.body
+    );
+    if (!NonMenuStaticContent3 || !eventId || !userId) {
+      return res
+        .status(400)
+        .json({
+          error: "NonMenuStaticContent3, eventId, and userId are required",
+        });
+    }
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.NonMenuStaticContent4 = async (req, res) => {
+  try {
+    const { NonMenuStaticContent4, eventId, userId } = req.body;
+    const result = await createStaticContent(
+      "NonMenuStaticContent4",
+      NonMenuStaticContent4,
+      eventId,
+      userId,
+      req.body
+    );
+    if (!NonMenuStaticContent4 || !eventId || !userId) {
+      return res
+        .status(400)
+        .json({
+          error: "NonMenuStaticContent4, eventId, and userId are required",
+        });
+    }
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.NonMenuStaticContent5 = async (req, res) => {
+  try {
+    const { NonMenuStaticContent5, eventId, userId } = req.body;
+    const result = await createStaticContent(
+      "NonMenuStaticContent5",
+      NonMenuStaticContent5,
+      eventId,
+      userId,
+      req.body
+    );
+    if (!NonMenuStaticContent4 || !eventId || !userId) {
+      return res
+        .status(400)
+        .json({
+          error: "NonMenuStaticContent4, eventId, and userId are required",
+        });
+    }
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };
