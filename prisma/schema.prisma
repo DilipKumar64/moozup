@@ -118,6 +118,7 @@ model Event {
   AwardedPerson      AwardedPerson[]
   galleryItems       GalleryItem[] // Added relation for gallery items
   staticContent      staticContent[]
+  participationTypeSettings ParticipationTypeSetting[] // Added relation for participation type settings
 }
 
 model EventAttendee {
@@ -203,6 +204,25 @@ model Report {
   reporter User @relation("UserReports", fields: [reporterId], references: [id])
 }
 
+model ParticipationTypeSetting {
+  id                    Int      @id @default(autoincrement())
+  eventId              Int
+  sourceTypeId         Int      // The source participation type (e.g., speaker)
+  targetTypeId         Int      // The target participation type (e.g., attendee)
+  canViewProfile       Boolean  @default(false)
+  canScheduleMeeting   Boolean  @default(false)
+  canSendMessage       Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Relations
+  event                Event            @relation(fields: [eventId], references: [id])
+  sourceType           ParticipationType @relation("SourceType", fields: [sourceTypeId], references: [id])
+  targetType           ParticipationType @relation("TargetType", fields: [targetTypeId], references: [id])
+
+  @@unique([eventId, sourceTypeId, targetTypeId])
+}
+
 model ParticipationType {
   id                      Int      @id @default(autoincrement())
   personParticipationType String
@@ -220,6 +240,10 @@ model ParticipationType {
 
   // Relation to User
   users User[]
+
+  // Relations for settings
+  sourceSettings         ParticipationTypeSetting[] @relation("SourceType")
+  targetSettings         ParticipationTypeSetting[] @relation("TargetType")
 }
 
 model SponsorType {
