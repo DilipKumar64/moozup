@@ -63,6 +63,8 @@ model User {
 
   GalleryItem   GalleryItem[]
   staticContent staticContent[]
+  interestCategories InterestCategory[]
+  interestAreas      InterestArea[]
 }
 
 model EventCategory {
@@ -119,6 +121,8 @@ model Event {
   galleryItems       GalleryItem[] // Added relation for gallery items
   staticContent      staticContent[]
   participationTypeSettings ParticipationTypeSetting[] // Added relation for participation type settings
+  interestCategories InterestCategory[]
+  interestAreas      InterestArea[]
 }
 
 model EventAttendee {
@@ -490,3 +494,29 @@ model staticContent {
   userId  Int
   user    User  @relation(fields: [userId], references: [id])
 }
+
+model InterestCategory {
+  id        Int      @id @default(autoincrement())
+  title     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdById    Int
+  createdBy      User     @relation(fields: [createdById], references: [id])
+  eventId   Int
+  event     Event    @relation(fields: [eventId], references: [id])
+  interestAreas InterestArea[]
+}
+
+model InterestArea {
+  id        Int      @id @default(autoincrement())
+  title     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdById    Int
+  createdBy      User     @relation(fields: [createdById], references: [id])
+  eventId   Int
+  event     Event    @relation(fields: [eventId], references: [id])
+  interestCategoryId Int
+  interestCategory   InterestCategory @relation(fields: [interestCategoryId], references: [id])
+}
+

@@ -47,7 +47,17 @@ const {
   updateParticipationTypeSetting,
   getParticipationTypeSettings,
   deleteParticipationTypeSetting,
-  updateParticipationTypeAttribute
+  updateParticipationTypeAttribute,
+  createInterestCategory,
+  updateInterestCategoryTitle,
+  getInterestCategoriesByEvent,
+  getInterestCategoryById,
+  deleteInterestCategory,
+  createInterestArea,
+  updateInterestArea,
+  getInterestAreasByEvent,
+  getInterestAreaById,
+  deleteInterestArea
 } = require('../controllers/directory.controller');
 const uploadFields = require("../middlewares/upload.middleware2");
 
@@ -109,5 +119,19 @@ router.post('/exhibitors/:id/documents', authenticateJWT, documentUpload.single(
 router.get('/exhibitors/:id', authenticateJWT, getExhibitorById); //exhibitor by id
 router.get('/exhibitors', authenticateJWT, getEventExhibitors); //all exhibitors
 router.delete('/exhibitors/:id', authenticateJWT, deleteExhibitor); //delete exhibitor
+
+// Interest Category routes
+router.post('/interest-categories', authenticateJWT, createInterestCategory);
+router.patch('/interest-categories/:id', authenticateJWT, updateInterestCategoryTitle);
+router.get('/interest-categories/event/:eventId', authenticateJWT, getInterestCategoriesByEvent);
+router.get('/interest-categories/:id', authenticateJWT, getInterestCategoryById);
+router.delete('/interest-categories/:id', authenticateJWT, deleteInterestCategory);
+
+// Interest Area routes
+router.post('/interest-areas', authenticateJWT, createInterestArea);
+router.patch('/interest-areas/:id', authenticateJWT, updateInterestArea);
+router.get('/interest-areas/event/:eventId', authenticateJWT, getInterestAreasByEvent);
+router.get('/interest-areas/:id', authenticateJWT, getInterestAreaById);
+router.delete('/interest-areas/:id', authenticateJWT, deleteInterestArea);
 
 module.exports = router;
