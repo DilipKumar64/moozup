@@ -60,6 +60,7 @@ model User {
   Session        Session[]
   sponsors       Sponsor[]       @relation("SponsorPerson")
   exhibitors     Exhibitor[]     @relation("ExhibitorPerson")
+  questions      Question[]      // Added relation for questions
 
   GalleryItem   GalleryItem[]
   staticContent staticContent[]
@@ -314,6 +315,8 @@ model Session {
   hall           String?
   track          String?
   keywords       String? // comma-separated
+  isLive         Boolean  @default(false)
+  wentLiveAt     DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -335,6 +338,7 @@ model Session {
   participationTypeId Int?
   participationType   ParticipationType? @relation(fields: [participationTypeId], references: [id])
   AwardedPerson       AwardedPerson[]
+  questions          Question[]
 }
 
 model AwardType {
@@ -518,5 +522,21 @@ model InterestArea {
   event     Event    @relation(fields: [eventId], references: [id])
   interestCategoryId Int
   interestCategory   InterestCategory @relation(fields: [interestCategoryId], references: [id])
+}
+
+// New Question model
+model Question {
+  id            Int      @id @default(autoincrement())
+  content       String   @db.Text
+  status        String   @default("pending") // pending, approved, declined
+  editedContent String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  sessionId     Int
+  session       Session  @relation(fields: [sessionId], references: [id])
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id])
 }
 
