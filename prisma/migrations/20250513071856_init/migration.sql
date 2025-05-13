@@ -23,6 +23,9 @@ CREATE TABLE "User" (
     "country" TEXT,
     "followersCount" INTEGER NOT NULL DEFAULT 0,
     "followingCount" INTEGER NOT NULL DEFAULT 0,
+    "hasLoggedIn" BOOLEAN NOT NULL DEFAULT false,
+    "hasPendingMeeting" BOOLEAN NOT NULL DEFAULT false,
+    "isMember" BOOLEAN NOT NULL DEFAULT false,
     "companyName" TEXT,
     "jobTitle" TEXT,
     "facebookUrl" TEXT,
@@ -140,6 +143,21 @@ CREATE TABLE "Report" (
 );
 
 -- CreateTable
+CREATE TABLE "ParticipationTypeSetting" (
+    "id" SERIAL NOT NULL,
+    "eventId" INTEGER NOT NULL,
+    "sourceTypeId" INTEGER NOT NULL,
+    "targetTypeId" INTEGER NOT NULL,
+    "canViewProfile" BOOLEAN NOT NULL DEFAULT false,
+    "canScheduleMeeting" BOOLEAN NOT NULL DEFAULT false,
+    "canSendMessage" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ParticipationTypeSetting_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "ParticipationType" (
     "id" SERIAL NOT NULL,
     "personParticipationType" TEXT NOT NULL,
@@ -147,6 +165,12 @@ CREATE TABLE "ParticipationType" (
     "priority" INTEGER NOT NULL DEFAULT 0,
     "isVisibleInApp" BOOLEAN NOT NULL DEFAULT true,
     "isAllowedInEvent" BOOLEAN NOT NULL DEFAULT true,
+    "canVideo" BOOLEAN NOT NULL DEFAULT true,
+    "canImage" BOOLEAN NOT NULL DEFAULT true,
+    "canDocument" BOOLEAN NOT NULL DEFAULT true,
+    "canMessage" BOOLEAN NOT NULL DEFAULT true,
+    "canChat" BOOLEAN NOT NULL DEFAULT true,
+    "canAsk" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "eventId" INTEGER NOT NULL,
@@ -360,6 +384,75 @@ CREATE TABLE "staticContent" (
 );
 
 -- CreateTable
+CREATE TABLE "PublicationsGroup" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "order" INTEGER NOT NULL DEFAULT 0,
+
+    CONSTRAINT "PublicationsGroup_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PublicationsItem" (
+    "id" SERIAL NOT NULL,
+    "message" TEXT,
+    "fileUrl" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "publicationsGroupId" INTEGER,
+    "eventId" INTEGER NOT NULL,
+    "userId" INTEGER NOT NULL,
+
+    CONSTRAINT "PublicationsItem_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "FeatureTabSetting" (
+    "id" TEXT NOT NULL,
+    "EventTabs" TEXT NOT NULL,
+    "icon" TEXT NOT NULL,
+    "filledIcon" TEXT NOT NULL,
+    "text" TEXT NOT NULL,
+    "action" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "eventId" INTEGER NOT NULL,
+
+    CONSTRAINT "FeatureTabSetting_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Collaborator" (
+    "id" SERIAL NOT NULL,
+    "fullName" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "role" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "eventId" INTEGER NOT NULL,
+    "userId" INTEGER NOT NULL,
+
+    CONSTRAINT "Collaborator_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "EmailTemplate" (
+    "id" SERIAL NOT NULL,
+    "type" TEXT NOT NULL,
+    "templateName" TEXT NOT NULL,
+    "emailSubject" TEXT NOT NULL,
+    "templateDescription" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "eventId" INTEGER,
+    "userId" INTEGER,
+
+    CONSTRAINT "EmailTemplate_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "_SponsorPerson" (
     "A" INTEGER NOT NULL,
     "B" INTEGER NOT NULL,
@@ -388,10 +481,16 @@ CREATE UNIQUE INDEX "EventRSVP_eventId_userId_key" ON "EventRSVP"("eventId", "us
 CREATE UNIQUE INDEX "Follow_followerId_followingId_key" ON "Follow"("followerId", "followingId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "ParticipationTypeSetting_eventId_sourceTypeId_targetTypeId_key" ON "ParticipationTypeSetting"("eventId", "sourceTypeId", "targetTypeId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "SessionType_sessionname_key" ON "SessionType"("sessionname");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "AwardType_awardType_key" ON "AwardType"("awardType");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Collaborator_email_key" ON "Collaborator"("email");
 
 -- CreateIndex
 CREATE INDEX "_SponsorPerson_B_index" ON "_SponsorPerson"("B");
@@ -443,6 +542,15 @@ ALTER TABLE "Follow" ADD CONSTRAINT "Follow_followingId_fkey" FOREIGN KEY ("foll
 
 -- AddForeignKey
 ALTER TABLE "Report" ADD CONSTRAINT "Report_reporterId_fkey" FOREIGN KEY ("reporterId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ParticipationTypeSetting" ADD CONSTRAINT "ParticipationTypeSetting_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ParticipationTypeSetting" ADD CONSTRAINT "ParticipationTypeSetting_sourceTypeId_fkey" FOREIGN KEY ("sourceTypeId") REFERENCES "ParticipationType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ParticipationTypeSetting" ADD CONSTRAINT "ParticipationTypeSetting_targetTypeId_fkey" FOREIGN KEY ("targetTypeId") REFERENCES "ParticipationType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ParticipationType" ADD CONSTRAINT "ParticipationType_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -509,6 +617,33 @@ ALTER TABLE "staticContent" ADD CONSTRAINT "staticContent_eventId_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "staticContent" ADD CONSTRAINT "staticContent_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PublicationsItem" ADD CONSTRAINT "PublicationsItem_publicationsGroupId_fkey" FOREIGN KEY ("publicationsGroupId") REFERENCES "PublicationsGroup"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PublicationsItem" ADD CONSTRAINT "PublicationsItem_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PublicationsItem" ADD CONSTRAINT "PublicationsItem_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "FeatureTabSetting" ADD CONSTRAINT "FeatureTabSetting_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "FeatureTabSetting" ADD CONSTRAINT "FeatureTabSetting_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Collaborator" ADD CONSTRAINT "Collaborator_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Collaborator" ADD CONSTRAINT "Collaborator_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "EmailTemplate" ADD CONSTRAINT "EmailTemplate_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "EmailTemplate" ADD CONSTRAINT "EmailTemplate_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_SponsorPerson" ADD CONSTRAINT "_SponsorPerson_A_fkey" FOREIGN KEY ("A") REFERENCES "Sponsor"("id") ON DELETE CASCADE ON UPDATE CASCADE;

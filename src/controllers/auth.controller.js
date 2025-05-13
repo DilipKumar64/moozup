@@ -1,18 +1,20 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { findUserByEmail, createUser, findUserById, updateUser, deleteUser, updateUserPassword } = require("../models/user.models");
-const { sendWelcomeEmail, sendPasswordResetEmail } = require("../utils/mailer");
+const {
+  findUserByEmail,
+  createUser,
+  findUserById,
+  updateUser,
+  deleteUser,
+  updateUserPassword
+} = require("../models/user.models");
 require("dotenv").config();
 
-// Email validation
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-// Password strength
-const isStrongPassword = (password) =>
-  typeof password === "string" && password.length >= 6;
+const isStrongPassword = (password) => typeof password === "string" && password.length >= 6;
 
 exports.signup = async (req, res) => {
-  const { firstName,lastName, email, password } = req.body;
+  const { firstName, lastName, email, password } = req.body;
 
   if (!firstName || !email || !password) {
     return res.status(400).json({ message: "All fields are required" });
@@ -38,12 +40,9 @@ exports.signup = async (req, res) => {
       lastName,
       email,
       password: hashedPassword,
+      hasLoggedIn: false,
+      loginCount: 0
     });
-
-    // Send welcome email (do not block response on email sending)
-    // sendWelcomeEmail({ to: email, firstName, email }).catch((err) => {
-    //   console.error("Failed to send welcome email:", err);
-    // });
 
     res.status(201).json({
       message: "User created successfully",
@@ -51,8 +50,8 @@ exports.signup = async (req, res) => {
         id: newUser.id,
         firstName: newUser.firstName,
         lastName: newUser.lastName,
-        email: newUser.email,
-      },
+        email: newUser.email
+      }
     });
   } catch (error) {
     console.error("Signup error:", error);
@@ -73,14 +72,18 @@ exports.login = async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid password" });
     }
-    
-    // Generate tokens
+
+    await updateUser(user.id, {
+      hasLoggedIn: true,
+      loginCount: user.loginCount + 1
+    });
+
     const accessToken = jwt.sign(
       { id: user.id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: "365d" }
     );
-    
+
     const refreshToken = jwt.sign(
       { id: user.id, email: user.email },
       process.env.REFRESH_TOKEN_SECRET,
@@ -95,8 +98,8 @@ exports.login = async (req, res) => {
         id: user.id,
         firstName: user.firstName,
         lastName: user.lastName,
-        email: user.email,
-      },
+        email: user.email
+      }
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -106,7 +109,6 @@ exports.login = async (req, res) => {
 
 exports.logout = async (req, res) => {
   try {
-    // Client will manually remove token (from localStorage/cookies)
     res.status(200).json({ message: "Logout successful. Please clear tokens from client side." });
   } catch (error) {
     console.error("Logout error:", error);
@@ -137,7 +139,7 @@ exports.refreshToken = async (req, res) => {
 
     res.status(200).json({
       message: "Token refreshed successfully",
-      accessToken: newAccessToken,
+      accessToken: newAccessToken
     });
   } catch (error) {
     console.error("Refresh token error:", error);
@@ -151,55 +153,31 @@ exports.resetPassword = async (req, res) => {
     const { oldPassword, newPassword } = req.body;
 
     if (!oldPassword || !newPassword) {
-      return res.status(400).json({ 
-        message: "Both old password and new password are required" 
-      });
+      return res.status(400).json({ message: "Both old password and new password are required" });
     }
 
-    // Validate password strength
     if (!isStrongPassword(newPassword)) {
-      return res.status(400).json({ 
-        message: "New password must be at least 6 characters long" 
-      });
+      return res.status(400).json({ message: "New password must be at least 6 characters long" });
     }
-    
-    // Validate user exists
+
     const user = await findUserById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Verify old password
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Old password is incorrect" });
     }
-    
-    // Hash the new password
+
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    
-    // Update user's password in database
     await updateUserPassword(userId, hashedPassword);
-    
-    // Send email notification and do not block response on email sending
-    // sendPasswordResetEmail({
-    //   to: user.email,
-    //   firstName: user.firstName,
-    //   newPassword
-    // }).catch((err) => {
-    //   console.error("Failed to send reset email:", err);
-    // });
-    
-    res.status(200).json({ 
-      message: "Password updated successfully. Please check your email for confirmation."
+
+    res.status(200).json({
+      message: "Password updated successfully."
     });
   } catch (error) {
     console.error("Password reset error:", error);
-    res.status(500).json({ 
-      message: "Error updating password",
-      error: error.message 
-    });
+    res.status(500).json({ message: "Error updating password", error: error.message });
   }
 };
-
-
