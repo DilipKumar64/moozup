@@ -33,6 +33,11 @@ model User {
   followingCount Int       @default(0)
   reports        Report[]  @relation("UserReports")
 
+  hasLoggedIn       Boolean @default(false)
+  hasPendingMeeting Boolean @default(false)
+  isMember          Boolean @default(false)
+  loginCount        Int     @default(0)
+
   // New fields addd when creating add people in directory
   companyName         String?
   jobTitle            String?
@@ -61,9 +66,12 @@ model User {
   sponsors       Sponsor[]       @relation("SponsorPerson")
   exhibitors     Exhibitor[]     @relation("ExhibitorPerson")
 
-  GalleryItem      GalleryItem[]
-  staticContent    staticContent[]
-  PublicationsItem PublicationsItem[]
+  GalleryItem       GalleryItem[]
+  staticContent     staticContent[]
+  PublicationsItem  PublicationsItem[]
+  FeatureTabSetting FeatureTabSetting[]
+  Collaborator      Collaborator[]
+  EmailTemplate     EmailTemplate[]
 }
 
 model EventCategory {
@@ -100,27 +108,30 @@ model Event {
   banner           String? // ✅ Added
 
   // Relations
-  creatorId          Int
-  creator            User                @relation("CreatedEvents", fields: [creatorId], references: [id])
-  categoryId         Int?
-  category           EventCategory?      @relation(fields: [categoryId], references: [id])
-  eventAttendees     EventAttendee[] // Users who joined
-  EventReport        EventReport[]
-  EventRSVP          EventRSVP[]
-  EventInvite        EventInvite[]
-  User               User?               @relation(fields: [userId], references: [id])
-  userId             Int?
-  participationTypes ParticipationType[] // Added relation for participation types
-  sponsorTypes       SponsorType[] // Added relation for sponsor types
-  exhibitorTypes     ExhibitorType[] // Added relation for exhibitor types
-  SessionType        SessionType[] // Added relation for session types
-  Session            Session[]
-  AwardType          AwardType[]
-  AwardedPerson      AwardedPerson[]
-  galleryItems       GalleryItem[] // Added relation for gallery items
-  staticContent      staticContent[]
+  creatorId                 Int
+  creator                   User                       @relation("CreatedEvents", fields: [creatorId], references: [id])
+  categoryId                Int?
+  category                  EventCategory?             @relation(fields: [categoryId], references: [id])
+  eventAttendees            EventAttendee[] // Users who joined
+  EventReport               EventReport[]
+  EventRSVP                 EventRSVP[]
+  EventInvite               EventInvite[]
+  User                      User?                      @relation(fields: [userId], references: [id])
+  userId                    Int?
+  participationTypes        ParticipationType[] // Added relation for participation types
+  sponsorTypes              SponsorType[] // Added relation for sponsor types
+  exhibitorTypes            ExhibitorType[] // Added relation for exhibitor types
+  SessionType               SessionType[] // Added relation for session types
+  Session                   Session[]
+  AwardType                 AwardType[]
+  AwardedPerson             AwardedPerson[]
+  galleryItems              GalleryItem[] // Added relation for gallery items
+  staticContent             staticContent[]
   participationTypeSettings ParticipationTypeSetting[] // Added relation for participation type settings
-  PublicationsItem   PublicationsItem[]
+  PublicationsItem          PublicationsItem[]
+  FeatureTabSetting         FeatureTabSetting[]
+  Collaborator              Collaborator[]
+  EmailTemplate             EmailTemplate[]
 }
 
 model EventAttendee {
@@ -207,20 +218,20 @@ model Report {
 }
 
 model ParticipationTypeSetting {
-  id                    Int      @id @default(autoincrement())
-  eventId              Int
-  sourceTypeId         Int      // The source participation type (e.g., speaker)
-  targetTypeId         Int      // The target participation type (e.g., attendee)
-  canViewProfile       Boolean  @default(false)
-  canScheduleMeeting   Boolean  @default(false)
-  canSendMessage       Boolean  @default(false)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                 Int      @id @default(autoincrement())
+  eventId            Int
+  sourceTypeId       Int // The source participation type (e.g., speaker)
+  targetTypeId       Int // The target participation type (e.g., attendee)
+  canViewProfile     Boolean  @default(false)
+  canScheduleMeeting Boolean  @default(false)
+  canSendMessage     Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   // Relations
-  event                Event            @relation(fields: [eventId], references: [id])
-  sourceType           ParticipationType @relation("SourceType", fields: [sourceTypeId], references: [id])
-  targetType           ParticipationType @relation("TargetType", fields: [targetTypeId], references: [id])
+  event      Event             @relation(fields: [eventId], references: [id])
+  sourceType ParticipationType @relation("SourceType", fields: [sourceTypeId], references: [id])
+  targetType ParticipationType @relation("TargetType", fields: [targetTypeId], references: [id])
 
   @@unique([eventId, sourceTypeId, targetTypeId])
 }
@@ -250,8 +261,8 @@ model ParticipationType {
   users User[]
 
   // Relations for settings
-  sourceSettings         ParticipationTypeSetting[] @relation("SourceType")
-  targetSettings         ParticipationTypeSetting[] @relation("TargetType")
+  sourceSettings ParticipationTypeSetting[] @relation("SourceType")
+  targetSettings ParticipationTypeSetting[] @relation("TargetType")
 }
 
 model SponsorType {
@@ -295,7 +306,8 @@ model SessionType {
 
   // Relation to Event
   eventId Int
-  event   Event     @relation(fields: [eventId], references: [id])
+  event   Event @relation(fields: [eventId], references: [id])
+
   Session Session[]
 }
 
@@ -510,10 +522,61 @@ model PublicationsItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  publicationsGroup      PublicationsGroup? @relation(fields: [publicationsGroupId], references: [id])
-  publicationsGroupId  Int? // Changed to `Int?` to match `GalleryGroup`'s `id` field type
+  publicationsGroup   PublicationsGroup? @relation(fields: [publicationsGroupId], references: [id])
+  publicationsGroupId Int? // Changed to `Int?` to match `GalleryGroup`'s `id` field type
+  eventId             Int
+  event               Event              @relation(fields: [eventId], references: [id])
+  userId              Int
+  user                User               @relation(fields: [userId], references: [id])
+}
+
+model FeatureTabSetting {
+  id         String   @id @default(uuid())
+  EventTabs  String
+  icon       String
+  filledIcon String
+  text       String
+  action     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  // Relation to Event
   eventId Int
-  event   Event              @relation(fields: [eventId], references: [id])
+
+  event Event @relation(fields: [eventId], references: [id])
+}
+
+model Collaborator {
+  id        Int      @id @default(autoincrement())
+  fullName  String
+  email     String   @unique
+  role      String
+  createdAt DateTime @default(now())
+
+  // Relation to Event
+  eventId Int
+  event   Event @relation(fields: [eventId], references: [id])
+  // Relation to User
   userId  Int
-  user    User               @relation(fields: [userId], references: [id])
+  user    User  @relation(fields: [userId], references: [id])
+}
+
+model EmailTemplate {
+  id                  Int      @id @default(autoincrement())
+  type                String // Type of email (e.g., "welcome", "password_reset")
+  templateName        String
+  emailSubject        String
+  templateDescription String // Email HTML body
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relation to Event
+  eventId Int?
+  event   Event? @relation(fields: [eventId], references: [id])
+  // Relation to User
+  userId  Int?
+  user    User?  @relation(fields: [userId], references: [id])
 }

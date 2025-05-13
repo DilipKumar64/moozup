@@ -19,3 +19,4 @@ router.post("/refresh-token",authLimiter, userController.refreshToken);
 router.post('/reset-password/:userId', authLimiter, authenticateJWT, userController.resetPassword);
 
 module.exports = router;
+ 

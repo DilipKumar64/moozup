@@ -27,3 +27,4 @@ npx prisma migrate dev --name update-group-model
 
 deploy commond =>
 npx prisma migrate deploy
+
