@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket.IO Event Test</title>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        input, button {
+            padding: 8px;
+            font-size: 14px;
+        }
+        button {
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        #events {
+            border: 1px solid #ddd;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+        }
+        .event-item {
+            margin-bottom: 8px;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .event-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Socket.IO Event Test</h1>
+        
+        <div class="input-group">
+            <input type="text" id="serverUrl" placeholder="Server URL (e.g., http://localhost:3001)" value="http://localhost:3001" style="flex: 1;">
+        </div>
+
+        <div class="input-group">
+            <input type="text" id="token" placeholder="Enter JWT Token" style="flex: 1;">
+            <button onclick="connect()">Connect</button>
+        </div>
+
+        <div id="status" class="disconnected">Disconnected</div>
+
+        <div class="input-group">
+            <input type="text" id="eventId" placeholder="Enter Event ID">
+            <button onclick="joinEvent()">Join Event</button>
+        </div>
+
+        <div class="input-group">
+            <input type="text" id="sessionId" placeholder="Enter Session ID">
+            <button onclick="joinSession()">Join Session</button>
+        </div>
+
+        <h3>Event Log:</h3>
+        <div id="events"></div>
+    </div>
+
+    <script>
+        let socket;
+        const eventsDiv = document.getElementById('events');
+        const statusDiv = document.getElementById('status');
+
+        function logEvent(message, data = null) {
+            const eventItem = document.createElement('div');
+            eventItem.className = 'event-item';
+            eventItem.innerHTML = `
+                <strong>${new Date().toLocaleTimeString()}</strong>: ${message}
+                ${data ? `<pre>${JSON.stringify(data, null, 2)}</pre>` : ''}
+            `;
+            eventsDiv.appendChild(eventItem);
+            eventsDiv.scrollTop = eventsDiv.scrollHeight;
+        }
+
+        function connect() {
+            const token = document.getElementById('token').value;
+            const serverUrl = document.getElementById('serverUrl').value;
+
+            if (!token) {
+                alert('Please enter a JWT token');
+                return;
+            }
+
+            if (!serverUrl) {
+                alert('Please enter a server URL');
+                return;
+            }
+
+            // Close existing connection if any
+            if (socket) {
+                socket.disconnect();
+            }
+
+            // Connect to Socket.IO server
+            socket = io(serverUrl, {
+                transports: ['websocket'],
+                auth: {
+                    token: token
+                }
+            });
+
+            // Connection events
+            socket.on('connect', () => {
+                statusDiv.textContent = 'Connected';
+                statusDiv.className = 'connected';
+                logEvent('Connected to server');
+            });
+
+            socket.on('disconnect', () => {
+                statusDiv.textContent = 'Disconnected';
+                statusDiv.className = 'disconnected';
+                logEvent('Disconnected from server');
+            });
+
+            socket.on('error', (error) => {
+                logEvent('Error:', error);
+            });
+
+            // Listen for session updates
+            socket.on('eventSessionUpdate', (data) => {
+                logEvent('Received session update:', data);
+            });
+
+            // Listen for question updates
+            socket.on('sessionQuestions', (data) => {
+                logEvent('Received question update:', data);
+            });
+        }
+
+        function joinEvent() {
+            const eventId = document.getElementById('eventId').value;
+            if (!eventId) {
+                alert('Please enter an event ID');
+                return;
+            }
+
+            if (!socket) {
+                alert('Please connect first');
+                return;
+            }
+
+            socket.emit('joinEvent', eventId, (response) => {
+                if (response && response.error) {
+                    logEvent('Error joining event:', response.error);
+                } else {
+                    logEvent(`Joined event room: ${eventId}`);
+                }
+            });
+        }
+
+        function joinSession() {
+            const sessionId = document.getElementById('sessionId').value;
+            if (!sessionId) {
+                alert('Please enter a session ID');
+                return;
+            }
+
+            if (!socket) {
+                alert('Please connect first');
+                return;
+            }
+
+            socket.emit('joinSession', sessionId, (response) => {
+                if (response && response.error) {
+                    logEvent('Error joining session:', response.error);
+                } else {
+                    logEvent(`Joined session room: ${sessionId}`);
+                }
+            });
+        }
+    </script>
+</body>
+</html> 

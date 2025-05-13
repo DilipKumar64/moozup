@@ -21,7 +21,10 @@ const initializeSocket = (server) => {
 
   // Authentication middleware
   io.use((socket, next) => {
-    const token = socket.handshake.auth.token;
+    // Check both auth object and headers for token
+    const token = socket.handshake.auth.token || socket.handshake.headers.token;
+    // console.log('Socket connection attempt with token:', token ? 'Present' : 'Missing');
+    
     if (!token) {
       return next(new Error('Authentication error'));
     }
@@ -29,23 +32,29 @@ const initializeSocket = (server) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       socket.userId = decoded.id;
+      // console.log('Socket authenticated for user:', socket.userId);
       next();
     } catch (err) {
+      console.error('JWT verification error:', err);
       next(new Error('Authentication error'));
     }
   });
 
   io.on('connection', (socket) => {
-    console.log('User connected:', socket.userId);
+    // console.log('User connected:', socket.userId);
+    // console.log('Socket rooms:', socket.rooms);
 
     // Join event room
     socket.on('joinEvent', async (eventId) => {
+      // console.log('joinEvent called with eventId:', eventId);
       if (!eventId) {
         socket.emit('error', { message: 'Event ID is required' });
         return;
       }
-      socket.join(`event:${eventId}`);
-      console.log(`User ${socket.userId} joined event ${eventId}`);
+      const roomName = `event:${eventId}`;
+      socket.join(roomName);
+      // console.log(`User ${socket.userId} joined event room: ${roomName}`);
+      // console.log('Current socket rooms:', socket.rooms);
     });
 
     // Leave event room
@@ -55,7 +64,7 @@ const initializeSocket = (server) => {
         return;
       }
       socket.leave(`event:${eventId}`);
-      console.log(`User ${socket.userId} left event ${eventId}`);
+      // console.log(`User ${socket.userId} left event ${eventId}`);
     });
 
     // Join session room
@@ -65,7 +74,7 @@ const initializeSocket = (server) => {
         return;
       }
       socket.join(`session:${sessionId}`);
-      console.log(`User ${socket.userId} joined session ${sessionId}`);
+      // console.log(`User ${socket.userId} joined session ${sessionId}`);
     });
 
     // Leave session room
@@ -75,12 +84,12 @@ const initializeSocket = (server) => {
         return;
       }
       socket.leave(`session:${sessionId}`);
-      console.log(`User ${socket.userId} left session ${sessionId}`);
+      // console.log(`User ${socket.userId} left session ${sessionId}`);
     });
 
     // Handle disconnection
     socket.on('disconnect', () => {
-      console.log('User disconnected:', socket.userId);
+       console.log('User disconnected:', socket.userId);
     });
 
     // Handle errors
@@ -97,13 +106,23 @@ const initializeSocket = (server) => {
 const emitSessionUpdate = (eventId, sessionData) => {
   if (!io) {
     throw new Error('Socket.IO not initialized');
+  } 
+  try {
+    const roomName = `event:${eventId}`;
+    // console.log('Emitting session update to room:', roomName);
+    // console.log('Session data:', sessionData);
+    // console.log('Connected sockets in room:', io.sockets.adapter.rooms.get(roomName)?.size || 0);
+    
+    io.to(roomName).emit('eventSessionUpdate', sessionData);
+    // console.log('Event session update emitted to room:', roomName);
+  } catch (error) {
+    console.error('Error emitting event session update:', error);
   }
-  io.to(`event:${eventId}`).emit('eventSessionUpdate', sessionData);
 };
 
 const emitQuestionUpdate = (sessionId, questionData) => {
   if (!io) {
-    throw new Error('Socket.IO not initialized');
+    throw new Error('Socket.IO not initialized')
   }
   io.to(`session:${sessionId}`).emit('sessionQuestions', questionData);
 };

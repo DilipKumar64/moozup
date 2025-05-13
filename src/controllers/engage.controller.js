@@ -1,6 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const { emitSessionUpdate, emitQuestionUpdate } = require('../socket');
-const { findSessionById, updateSessionLiveStatus, findSessionQuestions } = require('../models/session.model');
+const { findSessionById, updateSessionLiveStatus, findSessionQuestions, findSessionsByDate } = require('../models/session.model');
 const { createQuestion, updateQuestion, findQuestionById } = require('../models/question.model');
 const prisma = new PrismaClient();
 
@@ -162,5 +162,25 @@ exports.getSessionQuestions = async (req, res) => {
   } catch (error) {
     console.error('Error fetching questions:', error);
     res.status(500).json({ error: 'Failed to fetch questions' });
+  }
+};
+
+exports.getSessionsByDate = async (req, res) => {
+  const { date, eventId } = req.query;
+
+  // Enforce eventId is required
+  if (!eventId) {
+    return res.status(400).json({ error: 'eventId is required' });
+  }
+  if (date && !Date.parse(date)) {
+    return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD format' });
+  }
+
+  try {
+    const sessions = await findSessionsByDate(date, eventId);
+    res.json(sessions);
+  } catch (error) {
+    console.error('Error fetching sessions:', error);
+    res.status(500).json({ error: 'Failed to fetch sessions' });
   }
 }; 

@@ -17,7 +17,6 @@ const updateQuestion = (id, data) => prisma.question.update({
   where: { id: parseInt(id) },
   data,
   include: {
-    session: true,
     user: {
       select: {
         id: true,
