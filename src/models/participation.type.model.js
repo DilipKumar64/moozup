@@ -1,35 +1,46 @@
 const prisma = require("../config/prisma");
 
-const createParticipationType = (data) => prisma.participationType.create({ data });
+const createParticipationType = (data) =>
+  prisma.participationType.create({ data });
 
-const findParticipationTypeById = (id) => prisma.participationType.findUnique({
-  where: { id: parseInt(id) }
-});
+const findParticipationTypeById = (id) =>
+  prisma.participationType.findUnique({
+    where: { id: parseInt(id) },
+  });
 
-const findParticipationTypesByEventId = (eventId) => prisma.participationType.findMany({
-  where: { eventId: parseInt(eventId) }
-});
+const findParticipationTypesByEventId = (eventId) =>
+  prisma.participationType.findMany({
+    where: { eventId: parseInt(eventId) },
+  });
 
-const updateParticipationType = (id, data) => prisma.participationType.update({
-  where: { id: parseInt(id) },
-  data
-});
+const updateParticipationType = (id, data) =>
+  prisma.participationType.update({
+    where: { id: parseInt(id) },
+    data,
+  });
 
-const deleteParticipationType = (id) => prisma.participationType.delete({
-  where: { id: parseInt(id) }
-});
+const deleteParticipationType = (id) =>
+  prisma.participationType.delete({
+    where: { id: parseInt(id) },
+  });
 
 const updateVisibility = async (id, isVisibleInApp) => {
   return await prisma.participationType.update({
     where: { id: parseInt(id) },
-    data: { isVisibleInApp }
+    data: { isVisibleInApp },
   });
 };
 
 const updateEventAllowance = async (id, isAllowedInEvent) => {
   return await prisma.participationType.update({
     where: { id: parseInt(id) },
-    data: { isAllowedInEvent }
+    data: { isAllowedInEvent },
+  });
+};
+
+const deleteParticipationTypesByEventId = (eventId) => {
+  return prisma.participationType.deleteMany({
+    where: { eventId: parseInt(eventId) },
   });
 };
 
@@ -40,5 +51,6 @@ module.exports = {
   updateParticipationType,
   deleteParticipationType,
   updateVisibility,
-  updateEventAllowance
-}; 
+  updateEventAllowance,
+  deleteParticipationTypesByEventId,
+};

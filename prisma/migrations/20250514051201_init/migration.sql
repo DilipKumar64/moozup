@@ -26,6 +26,7 @@ CREATE TABLE "User" (
     "hasLoggedIn" BOOLEAN NOT NULL DEFAULT false,
     "hasPendingMeeting" BOOLEAN NOT NULL DEFAULT false,
     "isMember" BOOLEAN NOT NULL DEFAULT false,
+    "loginCount" INTEGER NOT NULL DEFAULT 0,
     "companyName" TEXT,
     "jobTitle" TEXT,
     "facebookUrl" TEXT,
