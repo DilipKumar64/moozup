@@ -660,6 +660,10 @@ exports.getSponsorTypesByEvent = async (req, res) => {
 };
 
 // Directory User Controller
+
+
+
+
 exports.createDirectoryUser = async (req, res) => {
   const {
     firstName,
@@ -770,6 +774,8 @@ exports.createDirectoryUser = async (req, res) => {
     });
   }
 };
+
+
 
 exports.updateDirectoryUser = async (req, res) => {
   const { id } = req.params;
@@ -957,6 +963,12 @@ exports.updateUserNote = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
 
 // Function to generate random 8-character alphanumeric password
 const generatePassword = () => {

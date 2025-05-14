@@ -29,8 +29,27 @@ const getPublicationItems = async () => {
   });
 };
 
+const getPublicationItemsByEventId = async (eventId) => {
+  return await prisma.publicationsItem.findMany({
+    where: {
+      eventId: parseInt(eventId),
+    },
+    include: {
+      publicationsGroup: true,
+    },
+  });
+};
+
+const deletePublicationItemById = async (id) => {
+  return await prisma.publicationsItem.delete({
+    where: { id: parseInt(id) },
+  });
+};
+
+
 module.exports = {
   createPublicationItem,
   getPublicationItems,
-  // getGalleryItems,
+  getPublicationItemsByEventId,
+  deletePublicationItemById
 };
