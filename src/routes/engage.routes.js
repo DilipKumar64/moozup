@@ -14,4 +14,10 @@ router.post('/session/:sessionId/questions', authenticateJWT, sessionController.
 router.patch('/question/:questionId', authenticateJWT, sessionController.updateQuestion);
 router.get('/:sessionId/questions', authenticateJWT, sessionController.getSessionQuestions);
 
+// Poll routes
+router.post('/session/:sessionId/poll', authenticateJWT, sessionController.createPoll);
+router.put('/poll/:pollId', authenticateJWT, sessionController.updatePoll);
+router.get('/polls', authenticateJWT, sessionController.getSessionPolls);
+router.post('/poll/:pollId/response', authenticateJWT, sessionController.submitPollResponse);
+
 module.exports = router; 

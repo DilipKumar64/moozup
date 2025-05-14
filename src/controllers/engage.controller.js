@@ -1,7 +1,25 @@
 const { PrismaClient } = require('@prisma/client');
-const { emitSessionUpdate, emitQuestionUpdate } = require('../socket');
+const { 
+  emitSessionUpdate, 
+  emitQuestionUpdate, 
+  emitPollCreated, 
+  emitPollUpdated, 
+  emitPollResponse, 
+  emitPollEnded 
+} = require('../socket');
 const { findSessionById, updateSessionLiveStatus, findSessionQuestions, findSessionsByDate } = require('../models/session.model');
 const { createQuestion, updateQuestion, findQuestionById } = require('../models/question.model');
+const { 
+  createPoll, 
+  findPollById, 
+  findPollsBySessionId, 
+  updatePoll, 
+  addPollResponse, 
+  getPollResults, 
+  endPoll, 
+  getActivePolls,
+  findPollsByEventId
+} = require('../models/poll.model');
 const prisma = new PrismaClient();
 
 // Validation middleware
@@ -183,4 +201,209 @@ exports.getSessionsByDate = async (req, res) => {
     console.error('Error fetching sessions:', error);
     res.status(500).json({ error: 'Failed to fetch sessions' });
   }
-}; 
+};
+
+// Poll Controller Functions
+exports.createPoll = async (req, res) => {
+  const { sessionId } = req.params;
+  const { question, passCode, pollsLimit, answerType, options, show } = req.body;
+  const userId = req.user.id;
+
+  // Validate request body
+  if (!question || !answerType || !options || !Array.isArray(options)) {
+    return res.status(400).json({ 
+      error: 'Missing required fields: question, answerType, and options array are required' 
+    });
+  }
+
+  if (!['SINGLE', 'MULTI'].includes(answerType)) {
+    return res.status(400).json({ error: 'answerType must be either SINGLE or MULTI' });
+  }
+
+  try {
+    // Check if session exists
+    const session = await findSessionById(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const poll = await createPoll({
+      question,
+      passCode,
+      pollsLimit,
+      answerType,
+      show: show || false,
+      sessionId: parseInt(sessionId),
+      options: options.map(option => ({ text: option }))
+    });
+
+    // Emit poll created event
+    emitPollCreated(sessionId, poll);
+
+    res.status(201).json(poll);
+  } catch (error) {
+    console.error('Error creating poll:', error);
+    res.status(500).json({ error: 'Failed to create poll' });
+  }
+};
+
+exports.updatePoll = async (req, res) => {
+  const { pollId } = req.params;
+  const { question, passCode, pollsLimit, answerType, options, show } = req.body;
+
+  try {
+    const existingPoll = await findPollById(pollId);
+    if (!existingPoll) {
+      return res.status(404).json({ error: 'Poll not found' });
+    }
+
+    const updatedPoll = await updatePoll(pollId, {
+      question,
+      passCode,
+      pollsLimit,
+      answerType,
+      show,
+      options
+    });
+
+    // Emit poll updated event
+    emitPollUpdated(existingPoll.sessionId, updatedPoll);
+
+    res.json(updatedPoll);
+  } catch (error) {
+    console.error('Error updating poll:', error);
+    res.status(500).json({ error: 'Failed to update poll' });
+  }
+};
+
+exports.getSessionPolls = async (req, res) => {
+  const { sessionId, eventId } = req.query;
+
+  // Validate that at least one parameter is provided
+  if (!sessionId && !eventId) {
+    return res.status(400).json({ 
+      error: 'Either sessionId or eventId query parameter is required' 
+    });
+  }
+
+  try {
+    let polls;
+    
+    if (eventId) {
+      // Get all polls for an event
+      polls = await findPollsByEventId(eventId);
+    } else {
+      // Get polls for a specific session
+      const session = await findSessionById(sessionId);
+      if (!session) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+      polls = await findPollsBySessionId(sessionId);
+    }
+
+    res.json({
+      success: true,
+      data: polls,
+      count: polls.length
+    });
+  } catch (error) {
+    console.error('Error fetching polls:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch polls',
+      details: error.message 
+    });
+  }
+};
+
+exports.submitPollResponse = async (req, res) => {
+  const { pollId } = req.params;
+  const { selectedOptions } = req.body;
+  const userId = req.user.id;
+
+  try {
+    const poll = await findPollById(pollId);
+    if (!poll) {
+      return res.status(404).json({ error: 'Poll not found' });
+    }
+
+    // Validate selected options based on answer type
+    if (poll.answerType === 'SINGLE' && selectedOptions.length > 1) {
+      return res.status(400).json({ error: 'Single answer poll can only have one selection' });
+    }
+
+    // Add responses for each selected option
+    const responses = await Promise.all(
+      selectedOptions.map(optionId => 
+        addPollResponse(pollId, userId, optionId)
+      )
+    );
+
+    // Get updated poll results
+    const results = await getPollResults(pollId);
+
+    // Emit poll response with results
+    emitPollResponse(poll.sessionId, pollId, {
+      userId,
+      selectedOptions,
+      results,
+      responses: responses.map(response => ({
+        userId: response.user.id,
+        firstName: response.user.firstName,
+        lastName: response.user.lastName,
+        optionId: response.optionId,
+        optionText: response.option.text,
+        respondedAt: response.createdAt
+      }))
+    });
+
+    res.json({ 
+      success: true, 
+      results,
+      responses: responses.map(response => ({
+        userId: response.user.id,
+        firstName: response.user.firstName,
+        lastName: response.user.lastName,
+        optionId: response.optionId,
+        optionText: response.option.text,
+        respondedAt: response.createdAt
+      }))
+    });
+  } catch (error) {
+    console.error('Error submitting poll response:', error);
+    if (error.message === 'User has already responded to this option') {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to submit poll response' });
+  }
+};
+
+
+
+// exports.getActivePolls = async (req, res) => {
+//   const { sessionId } = req.params;
+
+//   try {
+//     const polls = await getActivePolls(sessionId);
+//     res.json(polls);
+//   } catch (error) {
+//     console.error('Error fetching active polls:', error);
+//     res.status(500).json({ error: 'Failed to fetch active polls' });
+//   }
+// };
+
+// exports.getPollResults = async (req, res) => {
+//   const { pollId } = req.params;
+
+//   try {
+//     const poll = await findPollById(pollId);
+//     if (!poll) {
+//       return res.status(404).json({ error: 'Poll not found' });
+//     }
+
+//     const results = await getPollResults(pollId);
+//     res.json(results);
+//   } catch (error) {
+//     console.error('Error fetching poll results:', error);
+//     res.status(500).json({ error: 'Failed to fetch poll results' });
+//   }
+// }; 

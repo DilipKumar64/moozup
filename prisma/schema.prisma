@@ -61,6 +61,7 @@ model User {
   sponsors       Sponsor[]       @relation("SponsorPerson")
   exhibitors     Exhibitor[]     @relation("ExhibitorPerson")
   questions      Question[]      // Added relation for questions
+  pollResponses  PollResponse[]  // Added relation for poll responses
 
   GalleryItem   GalleryItem[]
   staticContent staticContent[]
@@ -339,6 +340,7 @@ model Session {
   participationType   ParticipationType? @relation(fields: [participationTypeId], references: [id])
   AwardedPerson       AwardedPerson[]
   questions          Question[]
+  polls              Poll[]
 }
 
 model AwardType {
@@ -538,5 +540,46 @@ model Question {
   session       Session  @relation(fields: [sessionId], references: [id])
   userId        Int
   user          User     @relation(fields: [userId], references: [id])
+}
+
+enum AnswerType {
+  SINGLE
+  MULTI
+}
+
+model Poll {
+  id            Int       @id @default(autoincrement())
+  question      String
+  passCode      String?
+  pollsLimit    Int?
+  answerType    AnswerType
+  show          Boolean   @default(false)
+  sessionId     Int?
+  session       Session?  @relation(fields: [sessionId], references: [id])
+  options       Option[]
+  responses     PollResponse[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Option {
+  id        Int     @id @default(autoincrement())
+  text      String
+  poll      Poll    @relation(fields: [pollId], references: [id])
+  pollId    Int
+  responses PollResponse[]
+}
+
+model PollResponse {
+  id        Int      @id @default(autoincrement())
+  poll      Poll     @relation(fields: [pollId], references: [id])
+  pollId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  option    Option   @relation(fields: [optionId], references: [id])
+  optionId  Int
+  createdAt DateTime @default(now())
+
+  @@unique([pollId, userId, optionId]) // Prevent duplicate responses for the same option
 }
 

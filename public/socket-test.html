@@ -36,6 +36,10 @@
         button:hover {
             background-color: #0056b3;
         }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
         #status {
             padding: 10px;
             border-radius: 4px;
@@ -64,6 +68,55 @@
         .event-item:last-child {
             border-bottom: none;
         }
+        .poll-section {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+        .poll-options {
+            margin: 10px 0;
+        }
+        .poll-option {
+            margin: 5px 0;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .poll-option:hover {
+            background-color: #f8f9fa;
+        }
+        .poll-results {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .result-bar {
+            height: 20px;
+            background-color: #007bff;
+            border-radius: 4px;
+            margin: 5px 0;
+            transition: width 0.3s ease;
+        }
+        .poll-info {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+        .response-list {
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .response-item {
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
     </style>
 </head>
 <body>
@@ -91,6 +144,27 @@
             <button onclick="joinSession()">Join Session</button>
         </div>
 
+        <div class="poll-section">
+            <h3>Poll Testing</h3>
+            <div class="poll-info" id="currentPollInfo" style="display: none;">
+                <h4 id="pollQuestion"></h4>
+                <p>Type: <span id="pollType"></span></p>
+                <p>Pass Code: <span id="pollPassCode"></span></p>
+            </div>
+            <div class="input-group">
+                <input type="text" id="pollId" placeholder="Enter Poll ID">
+                <button onclick="submitPollResponse()">Submit Response</button>
+            </div>
+            <div class="poll-options" id="pollOptions">
+                <!-- Options will be dynamically added here -->
+            </div>
+            <div class="poll-results" id="pollResults" style="display: none;">
+                <h4>Results</h4>
+                <div id="resultsContainer"></div>
+                <div class="response-list" id="responseList"></div>
+            </div>
+        </div>
+
         <h3>Event Log:</h3>
         <div id="events"></div>
     </div>
@@ -99,6 +173,7 @@
         let socket;
         const eventsDiv = document.getElementById('events');
         const statusDiv = document.getElementById('status');
+        let currentPoll = null;
 
         function logEvent(message, data = null) {
             const eventItem = document.createElement('div');
@@ -125,12 +200,10 @@
                 return;
             }
 
-            // Close existing connection if any
             if (socket) {
                 socket.disconnect();
             }
 
-            // Connect to Socket.IO server
             socket = io(serverUrl, {
                 transports: ['websocket'],
                 auth: {
@@ -138,7 +211,6 @@
                 }
             });
 
-            // Connection events
             socket.on('connect', () => {
                 statusDiv.textContent = 'Connected';
                 statusDiv.className = 'connected';
@@ -155,14 +227,34 @@
                 logEvent('Error:', error);
             });
 
-            // Listen for session updates
             socket.on('eventSessionUpdate', (data) => {
                 logEvent('Received session update:', data);
             });
 
-            // Listen for question updates
             socket.on('sessionQuestions', (data) => {
                 logEvent('Received question update:', data);
+            });
+
+            socket.on('pollCreated', (data) => {
+                logEvent('New poll created:', data);
+                updatePollUI(data);
+            });
+
+            socket.on('pollUpdated', (data) => {
+                logEvent('Poll updated:', data);
+                updatePollUI(data);
+            });
+
+            socket.on('pollResponse', (data) => {
+                logEvent('Poll response received:', data);
+                updatePollResults(data.results);
+                updateResponseList(data.responses);
+            });
+
+            socket.on('pollEnded', (data) => {
+                logEvent('Poll ended:', data);
+                updatePollResults(data.results);
+                disablePollUI();
             });
         }
 
@@ -206,6 +298,172 @@
                     logEvent(`Joined session room: ${sessionId}`);
                 }
             });
+        }
+
+        function submitPollResponse() {
+            const pollId = document.getElementById('pollId').value;
+            const selectedOptions = Array.from(document.querySelectorAll('input[name="pollOption"]:checked')).map(input => parseInt(input.value));
+            const sessionId = document.getElementById('sessionId').value;
+            const token = document.getElementById('token').value;
+
+            if (!pollId) {
+                alert('Please enter a poll ID');
+                return;
+            }
+
+            if (selectedOptions.length === 0) {
+                alert('Please select at least one option');
+                return;
+            }
+
+            if (!socket) {
+                alert('Please connect first');
+                return;
+            }
+
+            if (!sessionId) {
+                alert('Please join a session first');
+                return;
+            }
+
+            if (!token) {
+                alert('Please provide a valid token');
+                return;
+            }
+
+            // Show loading state
+            const submitButton = document.querySelector('button[onclick="submitPollResponse()"]');
+            const originalText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Submitting...';
+
+            // Make API call to submit response
+            fetch(`/api/engage/sessions/${sessionId}/polls/${pollId}/respond`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ selectedOptions })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.error || 'Failed to submit response');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                logEvent('Response submitted successfully:', data);
+                // Update UI with new results
+                if (data.results) {
+                    updatePollResults(data.results);
+                }
+                if (data.responses) {
+                    updateResponseList(data.responses);
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting response:', error);
+                alert(error.message || 'Failed to submit response. Please check your connection and try again.');
+            })
+            .finally(() => {
+                // Reset button state
+                submitButton.disabled = false;
+                submitButton.textContent = originalText;
+            });
+        }
+
+        function updatePollUI(pollData) {
+            currentPoll = pollData;
+            const pollInfo = document.getElementById('currentPollInfo');
+            const pollOptions = document.getElementById('pollOptions');
+            
+            // Update poll info
+            document.getElementById('pollQuestion').textContent = pollData.question;
+            document.getElementById('pollType').textContent = pollData.answerType;
+            document.getElementById('pollPassCode').textContent = pollData.passCode;
+            pollInfo.style.display = 'block';
+
+            // Update poll options
+            pollOptions.innerHTML = '';
+            if (pollData.options && Array.isArray(pollData.options)) {
+                pollData.options.forEach((option, index) => {
+                    const optionDiv = document.createElement('div');
+                    optionDiv.className = 'poll-option';
+                    optionDiv.innerHTML = `
+                        <input type="${pollData.answerType === 'SINGLE' ? 'radio' : 'checkbox'}" 
+                               name="pollOption" 
+                               value="${option.id}" 
+                               id="option${index}">
+                        <label for="option${index}">${option.text}</label>
+                    `;
+                    pollOptions.appendChild(optionDiv);
+                });
+            }
+
+            // Show results if available
+            if (pollData.results) {
+                updatePollResults(pollData.results);
+            }
+        }
+
+        function updatePollResults(results) {
+            const resultsContainer = document.getElementById('resultsContainer');
+            const responseList = document.getElementById('responseList');
+            const pollResults = document.getElementById('pollResults');
+            
+            // Update results bars
+            resultsContainer.innerHTML = '';
+            results.results.forEach(result => {
+                const percentage = (result.count / results.totalResponses) * 100 || 0;
+                const resultDiv = document.createElement('div');
+                resultDiv.innerHTML = `
+                    <div>${result.text}: ${result.count} (${percentage.toFixed(1)}%)</div>
+                    <div class="result-bar" style="width: ${percentage}%"></div>
+                `;
+                resultsContainer.appendChild(resultDiv);
+            });
+
+            // Update response list
+            responseList.innerHTML = '';
+            results.results.forEach(result => {
+                result.responses.forEach(response => {
+                    const responseDiv = document.createElement('div');
+                    responseDiv.className = 'response-item';
+                    responseDiv.innerHTML = `
+                        <strong>${response.firstName} ${response.lastName}</strong> 
+                        selected "${result.text}" 
+                        at ${new Date(response.respondedAt).toLocaleTimeString()}
+                    `;
+                    responseList.appendChild(responseDiv);
+                });
+            });
+
+            pollResults.style.display = 'block';
+        }
+
+        function updateResponseList(responses) {
+            const responseList = document.getElementById('responseList');
+            responses.forEach(response => {
+                const responseDiv = document.createElement('div');
+                responseDiv.className = 'response-item';
+                responseDiv.innerHTML = `
+                    <strong>${response.firstName} ${response.lastName}</strong> 
+                    selected "${response.optionText}" 
+                    at ${new Date(response.respondedAt).toLocaleTimeString()}
+                `;
+                responseList.appendChild(responseDiv);
+            });
+        }
+
+        function disablePollUI() {
+            const pollOptions = document.querySelectorAll('input[name="pollOption"]');
+            pollOptions.forEach(option => {
+                option.disabled = true;
+            });
+            document.querySelector('button[onclick="submitPollResponse()"]').disabled = true;
         }
     </script>
 </body>
