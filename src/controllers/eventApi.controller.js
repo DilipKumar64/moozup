@@ -1,5 +1,5 @@
-const { deleteFromSupabase } = require("../utils/supabaseImageUtils"); // image delete helper
 const prisma = require("../config/prisma");
+
 const {
   createEvent,
   findAllEvents,
@@ -14,6 +14,10 @@ const {
   getAttendees,
   createStaticContent,
 } = require("../models/eventModel"); // Import model function
+const { deleteParticipationTypesByEventId } = require("../models/participation.type.model");
+const { deleteParticipationTypeSettingsByEventId } = require("../models/participation.type.setting.model");
+const deleteFromSupabase = require("../utils/deleteFromSupabase");
+const getSupabasePath = require("../utils/getSupabasePath");
 const uploadToSupabase = require("../utils/uploadToSupabase");
 
 // Create Event
@@ -211,37 +215,47 @@ exports.deleteEvent = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // 1. Get existing event to fetch logo and banner URLs
     const existingEvent = await findEventById(id);
 
     if (!existingEvent) {
       return res.status(404).json({ message: "Event not found" });
     }
 
-    // 2. Delete logo and banner from Supabase
+    // 🖼 Delete logo if exists
     if (existingEvent.logo) {
-      await deleteFromSupabase(existingEvent.logo);
+      const logoPath = getSupabasePath(existingEvent.logo, "moozup/logos");
+      console.log("🖼 Deleting logo path:", logoPath);
+      await deleteFromSupabase("moozup", `logos/${logoPath}`);
     }
 
+    // 🖼 Delete banner if exists
     if (existingEvent.banner) {
-      await deleteFromSupabase(existingEvent.banner);
+      const bannerPath = getSupabasePath(existingEvent.banner, "moozup/banners");
+      console.log("🖼 Deleting banner path:", bannerPath);
+      await deleteFromSupabase("moozup", `banners/${bannerPath}`);
     }
 
-    // 3. Now delete the event from database
+    // Delete linked data
+    await deleteParticipationTypeSettingsByEventId(id);
+    await deleteParticipationTypesByEventId(id);
+
+    // Delete event
     const deletedEvent = await deleteEventById(id);
 
-    res.status(200).json({
-      message: "Event and images deleted successfully",
+    return res.status(200).json({
+      message: "Event and related data deleted successfully",
       event: deletedEvent,
     });
   } catch (error) {
     console.error("Error deleting event:", error);
-    res
-      .status(500)
-      .json({ message: "Error deleting event", error: error.message });
+    return res.status(500).json({
+      message: "Error deleting event",
+      error: error.message,
+    });
   }
 };
 
+// join event
 exports.joinEvent = async (req, res) => {
   const { userId } = req.body;
   const eventId = req.params.eventId; // Extracting eventId from URL params
@@ -608,11 +622,9 @@ exports.NonMenuStaticContent1 = async (req, res) => {
       req.body
     );
     if (!NonMenuStaticContent1 || !eventId || !userId) {
-      return res
-        .status(400)
-        .json({
-          error: "NonMenuStaticContent1, eventId, and userId are required",
-        });
+      return res.status(400).json({
+        error: "NonMenuStaticContent1, eventId, and userId are required",
+      });
     }
     res.status(201).json(result);
   } catch (err) {
@@ -631,11 +643,9 @@ exports.NonMenuStaticContent2 = async (req, res) => {
       req.body
     );
     if (!NonMenuStaticContent2 || !eventId || !userId) {
-      return res
-        .status(400)
-        .json({
-          error: "NonMenuStaticContent2, eventId, and userId are required",
-        });
+      return res.status(400).json({
+        error: "NonMenuStaticContent2, eventId, and userId are required",
+      });
     }
     res.status(201).json(result);
   } catch (err) {
@@ -654,11 +664,9 @@ exports.NonMenuStaticContent3 = async (req, res) => {
       req.body
     );
     if (!NonMenuStaticContent3 || !eventId || !userId) {
-      return res
-        .status(400)
-        .json({
-          error: "NonMenuStaticContent3, eventId, and userId are required",
-        });
+      return res.status(400).json({
+        error: "NonMenuStaticContent3, eventId, and userId are required",
+      });
     }
     res.status(201).json(result);
   } catch (err) {
@@ -677,11 +685,9 @@ exports.NonMenuStaticContent4 = async (req, res) => {
       req.body
     );
     if (!NonMenuStaticContent4 || !eventId || !userId) {
-      return res
-        .status(400)
-        .json({
-          error: "NonMenuStaticContent4, eventId, and userId are required",
-        });
+      return res.status(400).json({
+        error: "NonMenuStaticContent4, eventId, and userId are required",
+      });
     }
     res.status(201).json(result);
   } catch (err) {
@@ -700,11 +706,9 @@ exports.NonMenuStaticContent5 = async (req, res) => {
       req.body
     );
     if (!NonMenuStaticContent4 || !eventId || !userId) {
-      return res
-        .status(400)
-        .json({
-          error: "NonMenuStaticContent4, eventId, and userId are required",
-        });
+      return res.status(400).json({
+        error: "NonMenuStaticContent4, eventId, and userId are required",
+      });
     }
     res.status(201).json(result);
   } catch (err) {

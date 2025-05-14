@@ -14,6 +14,7 @@ const publicationItemRoutes = require("./src/routes/publication.routes");
 const publicationGroupsRoutes = require("./src/routes/publictionGroup.routes"); 
 const collaboratorRoutes = require("./src/routes/collaborator.routes");
 const emailTemplateRoutes = require("./src/routes/emailTemplate.routes"); 
+const contactRoutes = require("./src/routes/importdata.routes")
 const app = express();
 
 // Middleware
@@ -34,6 +35,7 @@ app.use('/api/publicationItem',publicationItemRoutes);
 app.use("/api/publicationGroup",publicationGroupsRoutes)
 app.use("/api/collaborator",collaboratorRoutes); 
 app.use("/api/emailTemplate",emailTemplateRoutes)
+app.use("/api/importData", contactRoutes);
 
 
 // Health check route

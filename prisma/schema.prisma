@@ -188,21 +188,7 @@ model Follow {
   @@unique([followerId, followingId])
 }
 
-// model JoinEvent {
-//   id        Int      @id @default(autoincrement())
-//   userId    Int
-//   eventId   Int
-//   createdAt DateTime @default(now())
 
-//   // Relation to User (User model)
-//   user User @relation(fields: [userId], references: [id])
-
-//   // Relation to Event
-//   event Event @relation(fields: [eventId], references: [id])
-
-//   // Unique constraint to prevent duplicate joins
-//   @@unique([userId, eventId]) // Ensure user can't join the same event more than once
-// }
 
 model Report {
   id               String   @id @default(uuid())
@@ -259,6 +245,7 @@ model ParticipationType {
 
   // Relation to User
   users User[]
+  
 
   // Relations for settings
   sourceSettings ParticipationTypeSetting[] @relation("SourceType")

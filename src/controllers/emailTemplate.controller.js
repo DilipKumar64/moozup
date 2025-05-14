@@ -181,12 +181,12 @@ exports.sendTestEmail = async (req, res) => {
 };
 
 
-
 exports.sendComposedEmails = async (req, res) => {
   const {
     templateId,
     subjectOverride,
     recipientScope,
+    selectedParticipationTypes = [], // e.g., ['Attendees', 'Speakers']
     emailType,
     conferenceName = "SEIC 2025",
     date = "12 May 2025",
@@ -206,21 +206,41 @@ exports.sendComposedEmails = async (req, res) => {
 
     let users = [];
 
-    // 2. Apply recipientScope
-    if (recipientScope !== "EVERYONE") {
-      return res.status(400).json({ message: "Invalid recipientScope value." });
-    }
+if (recipientScope === "EVERYONE") {
+  // Send to everyone with emailType filter
+  users = await prisma.user.findMany({
+    where: getUserFilterByEmailType(emailType),
+  });
 
-    // 3. Filter users based on emailType
-    users = await prisma.user.findMany({
-      where: getUserFilterByEmailType(emailType),
-    });
+} else if (recipientScope === "PARTICIPATION_TYPE") {
+  const { selectedParticipationTypes } = req.body;
+
+  if (!selectedParticipationTypes || selectedParticipationTypes.length === 0) {
+    return res.status(400).json({ message: "selectedParticipationTypes is required for PARTICIPATION_TYPE scope." });
+  }
+
+users = await prisma.user.findMany({
+  where: {
+    ...getUserFilterByEmailType(emailType),
+    participationTypeId: {
+      in: selectedParticipationTypes, // array of integers
+    },
+  },
+  include: {
+    participationType: true,
+  },
+});
+
+} else {
+  return res.status(400).json({ message: "Invalid recipientScope value." });
+}
+
 
     if (!users || users.length === 0) {
-      return res.json({ message: "Emails sent to 0 users." });
+      return res.json({ message: "No users found for the selected criteria." });
     }
 
-    // 4. Set up email transporter
+    // 3. Setup email transporter
     const transporter = nodemailer.createTransport({
       service: "Gmail",
       auth: {
@@ -229,7 +249,7 @@ exports.sendComposedEmails = async (req, res) => {
       },
     });
 
-    // 5. Send email to each user
+    // 4. Send emails
     for (const user of users) {
       const userName = user.firstName || "Participant";
 
@@ -260,6 +280,7 @@ exports.sendComposedEmails = async (req, res) => {
     return res.status(500).json({ message: "Failed to send emails", error: error.message });
   }
 };
+
 
 function getUserFilterByEmailType(emailType) {
   switch (emailType) {

@@ -1,19 +1,28 @@
+// middleware/upload.middleware.js
 const multer = require("multer");
-const storage = multer.memoryStorage();
 
-// Document file types allowed
 const docTypes = [
+  "application/pdf",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/pdf",
+];
+const excelTypes = [
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-excel",
 ];
 
-// File filter to only allow documents for 'fileUrl' in publication
+const storage = multer.memoryStorage(); // ✅ use memoryStorage for all
+
 const fileFilter = (req, file, cb) => {
   if (file.fieldname === "fileUrl" && !docTypes.includes(file.mimetype)) {
     return cb(new Error("Only document files are allowed for publication"), false);
   }
-  cb(null, true); // Baaki sab fields allowed hain
+
+  if (file.fieldname === "excelSheet" && !excelTypes.includes(file.mimetype)) {
+    return cb(new Error("Only Excel files are allowed for contact import"), false);
+  }
+
+  cb(null, true);
 };
 
 const upload = multer({ storage, fileFilter });
@@ -30,6 +39,7 @@ const uploadFields = {
     { name: "videoUrl", maxCount: 1 },
   ]),
   publication: upload.fields([{ name: "fileUrl", maxCount: 1 }]),
+  contactExcel: upload.fields([{ name: "excelSheet", maxCount: 1 }]), // Excel sheet field
 };
 
 module.exports = uploadFields;
