@@ -20,6 +20,7 @@ const { deleteParticipationTypesByEventId } = require("../models/participation.t
 const { deleteParticipationTypeSettingsByEventId } = require("../models/participation.type.setting.model");
 const { getPublicationItemsByEventId, deletePublicationItemById } = require("../models/publicationItem.model");
 const deleteFromSupabase = require("../utils/deleteFromSupabase");
+const getCoordinatesFromLocation = require("../utils/geocodeLocation");
 const getSupabasePath = require("../utils/getSupabasePath");
 const uploadToSupabase = require("../utils/uploadToSupabase");
 
@@ -78,6 +79,8 @@ exports.createEvent = async (req, res) => {
       });
     }
 
+    const { latitude, longitude } = await getCoordinatesFromLocation(eventLocation);
+
     let logoUrl = null;
     let bannerUrl = null;
 
@@ -97,6 +100,8 @@ exports.createEvent = async (req, res) => {
       startTime,
       endTime,
       eventLocation,
+      latitude,
+      longitude,
       moozupWebsite,
       eventWebsite,
       facebookId,

@@ -97,6 +97,8 @@ model Event {
   startTime        String?
   endTime          String?
   eventLocation    String?
+  latitude         Float?
+  longitude        Float?
   moozupWebsite    String?
   eventWebsite     String?
   facebookId       String?
@@ -603,7 +605,6 @@ model InterestArea {
   interestCategory   InterestCategory @relation(fields: [interestCategoryId], references: [id])
 }
 
-// New Question model
 model Question {
   id            Int      @id @default(autoincrement())
   content       String   @db.Text
@@ -658,4 +659,27 @@ model PollResponse {
   createdAt DateTime @default(now())
 
   @@unique([pollId, userId, optionId]) // Prevent duplicate responses for the same option
+}
+
+
+model Contact {
+  id             String   @id @default(uuid())
+  participantType String?
+  title           String?
+  firstName       String
+  lastName        String
+  companyName     String?
+  jobTitle        String?
+  email           String   @unique
+  phoneNumber     String?
+  imageUrl        String?
+  description     String?
+  location        String?
+  facebook        String?
+  linkedin        String?
+  twitter         String?
+  webProfile      String?
+  uid             String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
