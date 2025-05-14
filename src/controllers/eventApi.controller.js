@@ -14,8 +14,11 @@ const {
   getAttendees,
   createStaticContent,
 } = require("../models/eventModel"); // Import model function
+
+const { getGalleryItems, deleteGalleryItem } = require("../models/galleryModel");
 const { deleteParticipationTypesByEventId } = require("../models/participation.type.model");
 const { deleteParticipationTypeSettingsByEventId } = require("../models/participation.type.setting.model");
+const { getPublicationItemsByEventId, deletePublicationItemById } = require("../models/publicationItem.model");
 const deleteFromSupabase = require("../utils/deleteFromSupabase");
 const getSupabasePath = require("../utils/getSupabasePath");
 const uploadToSupabase = require("../utils/uploadToSupabase");
@@ -211,6 +214,7 @@ exports.updateEvent = async (req, res) => {
 
 // Delete Event
 
+
 exports.deleteEvent = async (req, res) => {
   const { id } = req.params;
 
@@ -221,39 +225,82 @@ exports.deleteEvent = async (req, res) => {
       return res.status(404).json({ message: "Event not found" });
     }
 
-    // 🖼 Delete logo if exists
+    // 🖼 Delete logo
     if (existingEvent.logo) {
-      const logoPath = getSupabasePath(existingEvent.logo, "moozup/logos");
+      const logoPath = getSupabasePath(existingEvent.logo, "moozup");
       console.log("🖼 Deleting logo path:", logoPath);
-      await deleteFromSupabase("moozup", `logos/${logoPath}`);
+      if (logoPath) await deleteFromSupabase("moozup", logoPath);
     }
 
-    // 🖼 Delete banner if exists
+    // 🖼 Delete banner
     if (existingEvent.banner) {
-      const bannerPath = getSupabasePath(existingEvent.banner, "moozup/banners");
+      const bannerPath = getSupabasePath(existingEvent.banner, "moozup");
       console.log("🖼 Deleting banner path:", bannerPath);
-      await deleteFromSupabase("moozup", `banners/${bannerPath}`);
+      if (bannerPath) await deleteFromSupabase("moozup", bannerPath);
     }
 
-    // Delete linked data
+    // 📸 Delete gallery items and associated media
+    const galleryItems = await getGalleryItems({ eventId: id });
+
+    await Promise.all(
+      galleryItems.map(async (item) => {
+        if (item.imageUrl) {
+          const imagePath = getSupabasePath(item.imageUrl, "moozup");
+          console.log("🖼 Deleting gallery image:", imagePath);
+          if (imagePath) await deleteFromSupabase("moozup", imagePath);
+        }
+
+        if (item.videoUrl) {
+          const videoPath = getSupabasePath(item.videoUrl, "moozup");
+          console.log("🎥 Deleting gallery video:", videoPath);
+          if (videoPath) await deleteFromSupabase("moozup", videoPath);
+        }
+
+        await deleteGalleryItem(item.id);
+      })
+    );
+
+    // 📄 Delete publication items (doc from Supabase + DB record)
+    const publicationItems = await getPublicationItemsByEventId(id);
+
+    await Promise.all(
+      publicationItems.map(async (item) => {
+      if (item.fileUrl) {
+      const docPath = getSupabasePath(item.fileUrl, "moozup"); // ✅ bucket only
+      console.log("📄 Deleting document path from Supabase:", docPath);
+
+      if (docPath) {
+        await deleteFromSupabase("moozup", docPath); // ✅ no extra folder prefix
+      } else {
+        console.warn("⚠️ docPath is null, skipping deleteFromSupabase");
+      }
+    }
+
+        await deletePublicationItemById(item.id);
+      })
+    );
+
+    // 🧾 Delete participation-related data
     await deleteParticipationTypeSettingsByEventId(id);
     await deleteParticipationTypesByEventId(id);
 
-    // Delete event
+    // ❌ Finally delete the event
     const deletedEvent = await deleteEventById(id);
 
     return res.status(200).json({
-      message: "Event and related data deleted successfully",
+      message: "Event and all linked data deleted successfully",
       event: deletedEvent,
     });
+
   } catch (error) {
-    console.error("Error deleting event:", error);
+    console.error("❌ Error deleting event:", error);
     return res.status(500).json({
       message: "Error deleting event",
       error: error.message,
     });
   }
 };
+
 
 // join event
 exports.joinEvent = async (req, res) => {

@@ -19,13 +19,6 @@ const createGroupWithImages = async ({ name, galleryItems = [] }) => {
       )
     );
 
-    // await tx.galleryGroup.update({
-    //   where: { id: galleryGroup.id },
-    //   data: {
-    //     galleryId: updatedItems[0].id,
-    //   },
-    // });
-
     return {
       ...galleryGroup,
       featuredImage: updatedItems[0],
@@ -36,7 +29,7 @@ const createGroupWithImages = async ({ name, galleryItems = [] }) => {
 
 const getGroupById = async (groupId) => {
   const group = await prisma.galleryGroup.findUnique({
-    where: { id: groupId },
+    where: { id: parseInt(groupId) },
     include: {
       galleryItems: true,  // Include all gallery items associated with the group
     },
@@ -50,12 +43,40 @@ const getGroupById = async (groupId) => {
 };
 
 const findAllGroup = () => prisma.galleryGroup.findMany({
-     include: {
-      galleryItems: true,
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
+  include: {
+    galleryItems: true,
+  },
+  orderBy: {
+    createdAt: 'desc',
+  },
 });
 
-module.exports = { createGroupWithImages, getGroupById,findAllGroup };
+const deleteGroupById = async (groupId) => {
+  const id = parseInt(groupId);
+
+  return await prisma.$transaction(async (tx) => {
+    const group = await tx.galleryGroup.findUnique({ where: { id } });
+
+    if (!group) {
+      throw new Error("Group not found");
+    }
+
+    // Remove groupId from associated gallery items
+    await tx.galleryItem.updateMany({
+      where: { groupId: id },
+      data: { groupId: null },
+    });
+
+    // Delete the group
+    await tx.galleryGroup.delete({ where: { id } });
+
+    return { message: "Group deleted successfully", groupId: id };
+  });
+};
+
+module.exports = {
+  createGroupWithImages,
+  getGroupById,
+  findAllGroup,
+  deleteGroupById
+};

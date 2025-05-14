@@ -7,5 +7,7 @@ const router = express.Router();
 
 router.post('/UploadPublicationitem',authenticateJWT,uploadFields.publication,publicationItemController.uploadPublicationitem);
 router.get('/getPublicationItems',authenticateJWT,publicationItemController.getPublicationItems);
+router.get("/getByEvent/:eventId",publicationItemController.fetchPublicationItemsByEventId);
+router.delete("/deletePublication/:id",publicationItemController.deletePublicationItem)
 
 module.exports = router;

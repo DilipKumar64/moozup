@@ -40,7 +40,27 @@ const getGalleryItems = async ({ groupId, eventId, userId }) => {
   });
 };
 
+const deleteGalleryItem = async (id) => {
+  return await prisma.galleryItem.delete({
+    where: {
+      id: parseInt(id),
+    },
+  });
+};
+
+const getGalleryItemById = async (id) => {
+  return await prisma.galleryItem.findUnique({
+    where: {
+      id: parseInt(id),
+    },
+  });
+};
+
+
+
 module.exports = {
   createGalleryItem,
   getGalleryItems,
+  deleteGalleryItem,
+  getGalleryItemById
 };
