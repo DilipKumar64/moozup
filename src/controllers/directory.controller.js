@@ -13,7 +13,8 @@ const {
   updateParticipationType,
   deleteParticipationType,
   updateVisibility,
-  updateEventAllowance
+  updateEventAllowance,
+  getAllParticipationTypes
 } = require('../models/participation.type.model');
 
 const {
@@ -21,7 +22,8 @@ const {
   findSponsorTypeById,
   findSponsorTypesByEventId,
   updateSponsorType,
-  deleteSponsorType
+  deleteSponsorType,
+  findAllSponsorTypes
 } = require('../models/sponsor.types.model');
 
 const {
@@ -34,7 +36,8 @@ const {
   findUsersByParticipationTypeId,
   bulkDeleteUsers,
   bulkUpdateDisplayOrder,
-  updateUserDisplayOrder
+  updateUserDisplayOrder,
+  findAllUser
 } = require('../models/user.models');
 
 const {
@@ -410,6 +413,22 @@ exports.getParticipationTypesByEvent = async (req, res) => {
   }
 };
 
+exports.getAllParticipationTypes = async (req, res) => {
+  try {
+    const participationTypes = await getAllParticipationTypes();
+    res.status(200).json({
+      message: "Participation types retrieved successfully",
+      participationTypes
+    });
+
+  } catch (error) {
+    console.error("Get all participation types error:", error);
+    res.status(500).json({ message: "Something went wrong", error: error.message });
+
+
+  }
+}
+
 // Participation Type Settings Controllers
 exports.createParticipationTypeSetting = async (req, res) => {
   const {
@@ -658,6 +677,21 @@ exports.getSponsorTypesByEvent = async (req, res) => {
     res.status(500).json({ message: "Something went wrong", error: error.message });
   }
 };
+
+exports.getSponsorTypes = async (req, res) => {
+  try {
+    const sponsorTypes = await findAllSponsorTypes();
+    res.status(200).json({
+      message: "Sponsor types retrieved successfully",
+      sponsorTypes
+    });
+
+  } catch (error) {
+    console.error("Get sponsor types error:", error);
+    res.status(500).json({ message: "Something went wrong", error: error.message });
+
+  }
+}
 
 // Directory User Controller
 
@@ -964,6 +998,18 @@ exports.updateUserNote = async (req, res) => {
   }
 };
 
+exports.findAllUser=async(req,res)=>{
+  try {
+    const users = await findAllUser();
+    res.status(200).json(users);
+    } catch (error) {
+      res.status(500).json({
+        message: "Something went wrong",
+        error: error.message
+        });
+}
+}
+
 
 
 
@@ -1135,10 +1181,10 @@ exports.bulkUpdateDisplayOrder = async (req, res) => {
     }
 
     // Validate the updates array
-    const invalidUpdates = updates.filter(update => 
-      !update.id || 
-      !update.displayOrder || 
-      isNaN(parseInt(update.id)) || 
+    const invalidUpdates = updates.filter(update =>
+      !update.id ||
+      !update.displayOrder ||
+      isNaN(parseInt(update.id)) ||
       isNaN(parseInt(update.displayOrder))
     );
 
@@ -1566,10 +1612,10 @@ exports.bulkUpdateSponsorDisplayOrder = async (req, res) => {
     }
 
     // Validate the updates array
-    const invalidUpdates = updates.filter(update => 
-      !update.id || 
-      !update.displayOrder || 
-      isNaN(parseInt(update.id)) || 
+    const invalidUpdates = updates.filter(update =>
+      !update.id ||
+      !update.displayOrder ||
+      isNaN(parseInt(update.id)) ||
       isNaN(parseInt(update.displayOrder))
     );
 
@@ -2003,7 +2049,7 @@ exports.getExhibitorById = async (req, res) => {
   try {
     // Get exhibitor by ID
     const exhibitor = await findExhibitorById(id);
-    
+
     if (!exhibitor) {
       return res.status(404).json({
         message: "Exhibitor not found"

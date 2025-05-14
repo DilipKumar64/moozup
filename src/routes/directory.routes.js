@@ -57,7 +57,10 @@ const {
   updateInterestArea,
   getInterestAreasByEvent,
   getInterestAreaById,
-  deleteInterestArea
+  deleteInterestArea,
+  getAllParticipationTypes,
+  getSponsorTypes,
+  findAllUser
 } = require('../controllers/directory.controller');
 const uploadFields = require("../middlewares/upload.middleware2");
 
@@ -68,6 +71,8 @@ router.delete('/participation-types/:id', authenticateJWT, deleteParticipationTy
 router.put('/participation-types/:id/visibility', authenticateJWT, updateVisibility);
 router.put('/participation-types/:id/event-allowance', authenticateJWT, updateEventAllowance);
 router.get('/participation-types/event/:eventId', authenticateJWT, getParticipationTypesByEvent);
+router.get("/get-all-participation",authenticateJWT,getAllParticipationTypes)
+
 
 // Participation Type Settings Routes
 router.post('/participation-type-settings', authenticateJWT, createParticipationTypeSetting);
@@ -81,6 +86,7 @@ router.post('/sponsor-types', authenticateJWT, createSponsorType);
 router.put('/sponsor-types/:id', authenticateJWT, updateSponsorType);
 router.delete('/sponsor-types/:id', authenticateJWT, deleteSponsorType);
 router.get('/sponsor-types/event/:eventId', authenticateJWT, getSponsorTypesByEvent);
+router.get("/findAllSponsor-types",authenticateJWT,getSponsorTypes)
 
 // Exhibitor Type Routes
 router.post('/exhibitor-types', authenticateJWT, createExhibitorType);
@@ -100,6 +106,7 @@ router.get('/people/participation-type/:participationTypeId', authenticateJWT, g
 router.post('/people/bulk-delete', authenticateJWT, bulkDeleteUsers);
 router.post('/people/bulk-display-order', authenticateJWT, bulkUpdateDisplayOrder);
 router.patch('/people/display-order/:id', authenticateJWT, updateUserDisplayOrder);
+router.get('/allPeople', authenticateJWT, findAllUser);
 
 // Sponsor routes
 router.get('/sponsors', authenticateJWT, getAllSponsors);

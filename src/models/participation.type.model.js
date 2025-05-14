@@ -44,6 +44,11 @@ const deleteParticipationTypesByEventId = (eventId) => {
   });
 };
 
+const getAllParticipationTypes = () =>{
+  return prisma.participationType.findMany()
+
+}
+
 module.exports = {
   createParticipationType,
   findParticipationTypeById,
@@ -53,4 +58,5 @@ module.exports = {
   updateVisibility,
   updateEventAllowance,
   deleteParticipationTypesByEventId,
+  getAllParticipationTypes
 };

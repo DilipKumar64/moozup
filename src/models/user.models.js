@@ -113,6 +113,17 @@ const updateUserDisplayOrder = async (id, displayOrder) => {
   });
 };
 
+const findAllUser = async()=>{
+  return await prisma.user.findMany({
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      participationType:true
+    }
+    });
+}
+
 module.exports = {
   createUser,
   findUserByEmail,
@@ -124,5 +135,6 @@ module.exports = {
   findUsersByParticipationTypeId,
   bulkDeleteUsers,
   bulkUpdateDisplayOrder,
-  updateUserDisplayOrder
+  updateUserDisplayOrder,
+  findAllUser
 };
