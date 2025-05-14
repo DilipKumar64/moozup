@@ -62,6 +62,26 @@ const {
   deleteSettingsByParticipationTypeId
 } = require('../models/participation.type.setting.model');
 
+const {
+  createInterestCategory,
+  updateInterestCategory,
+  findInterestCategoryById,
+  findInterestCategoriesByEventId,
+  deleteInterestCategory
+} = require('../models/interest.category.model');
+
+const {
+  findEventById
+} = require('../models/eventModel');
+
+const {
+  createInterestArea,
+  findInterestAreaById,
+  updateInterestArea,
+  findInterestAreasByEventId,
+  deleteInterestArea
+} = require('../models/interest.area.model');
+
 const isIdValid = (id) => {
   return !isNaN(parseInt(id)) && parseInt(id) > 0;
 };
@@ -2131,6 +2151,359 @@ exports.updateParticipationTypeAttribute = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating participation type attribute',
+      error: error.message
+    });
+  }
+};
+
+exports.createInterestCategory = async (req, res) => {
+  const {
+    title,
+    eventId
+  } = req.body;
+
+  // Get userId from authenticated user
+  const userId = req.user.id;
+
+  // Validate required fields
+  if (!title || !eventId) {
+    return res.status(400).json({
+      message: "Missing required fields. Required fields are: title, eventId"
+    });
+  }
+
+  try {
+    // Validate if event exists
+    const event = await findEventById(eventId);
+    if (!event) {
+      return res.status(404).json({
+        message: "Event not found"
+      });
+    }
+
+    // Create the interest category
+    const interestCategory = await createInterestCategory({
+      title,
+      eventId: parseInt(eventId),
+      createdById: parseInt(userId)
+    });
+
+    res.status(201).json({
+      message: "Interest category created successfully",
+      interestCategory
+    });
+  } catch (error) {
+    console.error("Create interest category error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.updateInterestCategoryTitle = async (req, res) => {
+  const { id } = req.params;
+  const { title } = req.body;
+
+  // Validate required fields
+  if (!title) {
+    return res.status(400).json({
+      message: "Title is required"
+    });
+  }
+
+  try {
+    // Check if interest category exists
+    const existingCategory = await findInterestCategoryById(id);
+    if (!existingCategory) {
+      return res.status(404).json({
+        message: "Interest category not found"
+      });
+    }
+
+    // Update the interest category title
+    const updatedCategory = await updateInterestCategory(id, {
+      title
+    });
+
+    res.status(200).json({
+      message: "Interest category title updated successfully",
+      interestCategory: updatedCategory
+    });
+  } catch (error) {
+    console.error("Update interest category title error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.getInterestCategoriesByEvent = async (req, res) => {
+  const { eventId } = req.params;
+
+  try {
+    // Validate if event exists
+    const event = await findEventById(eventId);
+    if (!event) {
+      return res.status(404).json({
+        message: "Event not found"
+      });
+    }
+
+    // Get all interest categories for the event
+    const interestCategories = await findInterestCategoriesByEventId(eventId);
+
+    res.status(200).json({
+      message: "Interest categories retrieved successfully",
+      interestCategories
+    });
+  } catch (error) {
+    console.error("Get interest categories error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.getInterestCategoryById = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Check if interest category exists
+    const interestCategory = await findInterestCategoryById(id);
+    if (!interestCategory) {
+      return res.status(404).json({
+        message: "Interest category not found"
+      });
+    }
+
+    res.status(200).json({
+      message: "Interest category retrieved successfully",
+      interestCategory
+    });
+  } catch (error) {
+    console.error("Get interest category error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.deleteInterestCategory = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Check if interest category exists
+    const existingCategory = await findInterestCategoryById(id);
+    if (!existingCategory) {
+      return res.status(404).json({
+        message: "Interest category not found"
+      });
+    }
+
+    // Delete the interest category
+    await deleteInterestCategory(id);
+
+    res.status(200).json({
+      message: "Interest category deleted successfully"
+    });
+  } catch (error) {
+    console.error("Delete interest category error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.createInterestArea = async (req, res) => {
+  const {
+    title,
+    eventId,
+    interestCategoryId
+  } = req.body;
+
+  // Get userId from authenticated user
+  const userId = req.user.id;
+
+  // Validate required fields
+  if (!title || !eventId || !interestCategoryId) {
+    return res.status(400).json({
+      message: "Missing required fields. Required fields are: title, eventId, interestCategoryId"
+    });
+  }
+
+  try {
+    // Validate if event exists
+    const event = await findEventById(eventId);
+    if (!event) {
+      return res.status(404).json({
+        message: "Event not found"
+      });
+    }
+
+    // Validate if interest category exists
+    const interestCategory = await findInterestCategoryById(interestCategoryId);
+    if (!interestCategory) {
+      return res.status(404).json({
+        message: "Interest category not found"
+      });
+    }
+
+    // Create the interest area
+    const interestArea = await createInterestArea({
+      title,
+      eventId: parseInt(eventId),
+      interestCategoryId: parseInt(interestCategoryId),
+      createdById: parseInt(userId)
+    });
+
+    res.status(201).json({
+      message: "Interest area created successfully",
+      interestArea
+    });
+  } catch (error) {
+    console.error("Create interest area error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.updateInterestArea = async (req, res) => {
+  const { id } = req.params;
+  const {
+    title,
+    interestCategoryId
+  } = req.body;
+
+  // Validate required fields
+  if (!title && !interestCategoryId) {
+    return res.status(400).json({
+      message: "No fields to update"
+    });
+  }
+
+  try {
+    // Check if interest area exists
+    const existingArea = await findInterestAreaById(id);
+    if (!existingArea) {
+      return res.status(404).json({
+        message: "Interest area not found"
+      });
+    }
+
+    // If interestCategoryId is provided, validate it exists
+    if (interestCategoryId) {
+      const interestCategory = await findInterestCategoryById(interestCategoryId);
+      if (!interestCategory) {
+        return res.status(404).json({
+          message: "Interest category not found"
+        });
+      }
+    }
+
+    // Prepare update data
+    const updateData = {
+      title: title || existingArea.title,
+      interestCategoryId: interestCategoryId ? parseInt(interestCategoryId) : existingArea.interestCategoryId
+    };
+
+    // Update the interest area
+    const updatedArea = await updateInterestArea(id, updateData);
+
+    res.status(200).json({
+      message: "Interest area updated successfully",
+      interestArea: updatedArea
+    });
+  } catch (error) {
+    console.error("Update interest area error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.getInterestAreasByEvent = async (req, res) => {
+  const { eventId } = req.params;
+
+  try {
+    // Validate if event exists
+    const event = await findEventById(eventId);
+    if (!event) {
+      return res.status(404).json({
+        message: "Event not found"
+      });
+    }
+
+    // Get all interest areas for the event
+    const interestAreas = await findInterestAreasByEventId(eventId);
+
+    res.status(200).json({
+      message: "Interest areas retrieved successfully",
+      interestAreas
+    });
+  } catch (error) {
+    console.error("Get interest areas error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.getInterestAreaById = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Check if interest area exists
+    const interestArea = await findInterestAreaById(id);
+    if (!interestArea) {
+      return res.status(404).json({
+        message: "Interest area not found"
+      });
+    }
+
+    res.status(200).json({
+      message: "Interest area retrieved successfully",
+      interestArea
+    });
+  } catch (error) {
+    console.error("Get interest area error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+    });
+  }
+};
+
+exports.deleteInterestArea = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Check if interest area exists
+    const existingArea = await findInterestAreaById(id);
+    if (!existingArea) {
+      return res.status(404).json({
+        message: "Interest area not found"
+      });
+    }
+
+    // Delete the interest area
+    await deleteInterestArea(id);
+
+    res.status(200).json({
+      message: "Interest area deleted successfully"
+    });
+  } catch (error) {
+    console.error("Delete interest area error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
       error: error.message
     });
   }

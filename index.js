@@ -1,7 +1,9 @@
 const express = require("express");
-require("dotenv").config();
 const cors = require("cors");
 const morgan = require("morgan");
+const http = require('http');
+require("dotenv").config();
+
 const authRoutes = require("./src/routes/auth.route");
 const eventApiRoutes = require("./src/routes/eventApi.routes");
 const userRoutes = require("./src/routes/user.routes");
@@ -15,7 +17,13 @@ const publicationGroupsRoutes = require("./src/routes/publictionGroup.routes");
 const collaboratorRoutes = require("./src/routes/collaborator.routes");
 const emailTemplateRoutes = require("./src/routes/emailTemplate.routes"); 
 const contactRoutes = require("./src/routes/importdata.routes")
+const engageRoutes = require("./src/routes/engage.routes");
+const { initializeSocket } = require('./src/socket');
 const app = express();
+const server = http.createServer(app);
+
+// Initialize Socket.IO
+initializeSocket(server);
 
 // Middleware
 app.use(cors());
@@ -36,7 +44,7 @@ app.use("/api/publicationGroup",publicationGroupsRoutes)
 app.use("/api/collaborator",collaboratorRoutes); 
 app.use("/api/emailTemplate",emailTemplateRoutes)
 app.use("/api/importData", contactRoutes);
-
+app.use("/api/engage", engageRoutes);
 
 // Health check route
 app.get("/", (req, res) => {
@@ -63,7 +71,7 @@ app.use((err, req, res, next) => {
 // Only start the server if we're not in a serverless environment
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`🚀 Server is live at: http://localhost:${PORT}
     🌍 Environment: ${process.env.NODE_ENV || "development"}`);
   });
