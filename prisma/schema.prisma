@@ -65,15 +65,15 @@ model User {
   Session        Session[]
   sponsors       Sponsor[]       @relation("SponsorPerson")
   exhibitors     Exhibitor[]     @relation("ExhibitorPerson")
-  questions      Question[]      // Added relation for questions
-  pollResponses  PollResponse[]  // Added relation for poll responses
+  questions      Question[] // Added relation for questions
+  pollResponses  PollResponse[] // Added relation for poll responses
 
-  GalleryItem       GalleryItem[]
-  staticContent     staticContent[]
-  PublicationsItem  PublicationsItem[]
-  FeatureTabSetting FeatureTabSetting[]
-  Collaborator      Collaborator[]
-  EmailTemplate     EmailTemplate[]
+  GalleryItem        GalleryItem[]
+  staticContent      staticContent[]
+  PublicationsItem   PublicationsItem[]
+  FeatureTabSetting  FeatureTabSetting[]
+  Collaborator       Collaborator[]
+  EmailTemplate      EmailTemplate[]
   interestCategories InterestCategory[]
   interestAreas      InterestArea[]
 }
@@ -136,8 +136,8 @@ model Event {
   FeatureTabSetting         FeatureTabSetting[]
   Collaborator              Collaborator[]
   EmailTemplate             EmailTemplate[]
-  interestCategories InterestCategory[]
-  interestAreas      InterestArea[]
+  interestCategories        InterestCategory[]
+  interestAreas             InterestArea[]
 }
 
 model EventAttendee {
@@ -194,8 +194,6 @@ model Follow {
   @@unique([followerId, followingId])
 }
 
-
-
 model Report {
   id               String   @id @default(uuid())
   reporterId       Int
@@ -251,7 +249,6 @@ model ParticipationType {
 
   // Relation to User
   users User[]
-  
 
   // Relations for settings
   sourceSettings ParticipationTypeSetting[] @relation("SourceType")
@@ -305,22 +302,22 @@ model SessionType {
 }
 
 model Session {
-  id             Int      @id @default(autoincrement())
+  id             Int       @id @default(autoincrement())
   title          String
-  description    String?  @db.Text
+  description    String?   @db.Text
   date           DateTime
-  startTime      DateTime
-  endTime        DateTime
-  isSpeakathon   Boolean  @default(false)
-  enableFeedback Boolean  @default(false)
+  startTime      String
+  endTime        String
+  isSpeakathon   Boolean   @default(false)
+  enableFeedback Boolean   @default(false)
   venue          String?
   hall           String?
   track          String?
   keywords       String? // comma-separated
-  isLive         Boolean  @default(false)
+  isLive         Boolean   @default(false)
   wentLiveAt     DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   // Relations
   sessionTypeId Int
@@ -329,19 +326,21 @@ model Session {
   eventId Int
   event   Event @relation(fields: [eventId], references: [id])
 
-  sponsorTypeId Int?
-  sponsorType   SponsorType? @relation(fields: [sponsorTypeId], references: [id])
+  sponsorTypeId Int
+  sponsorType   SponsorType @relation(fields: [sponsorTypeId], references: [id])
 
-  sponsorName String?
+  sponsorName Int
+  sponsor     Sponsor @relation(fields: [sponsorName], references: [id])
 
-  speakerId Int?
-  speaker   User? @relation(fields: [speakerId], references: [id])
+  speakerId Int
+  speaker   User @relation(fields: [speakerId], references: [id])
 
-  participationTypeId Int?
-  participationType   ParticipationType? @relation(fields: [participationTypeId], references: [id])
-  AwardedPerson       AwardedPerson[]
-  questions          Question[]
-  polls              Poll[]
+  participationTypeId Int
+  participationType   ParticipationType @relation(fields: [participationTypeId], references: [id])
+
+  AwardedPerson AwardedPerson[]
+  questions     Question[]
+  polls         Poll[]
 }
 
 model AwardType {
@@ -394,6 +393,7 @@ model Sponsor {
 
   // Documents array
   documents SponsorDocument[]
+  Session   Session[]
 }
 
 model SponsorDocument {
@@ -577,27 +577,28 @@ model EmailTemplate {
   userId  Int?
   user    User?  @relation(fields: [userId], references: [id])
 }
+
 model InterestCategory {
-  id        Int      @id @default(autoincrement())
-  title     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  createdById    Int
-  createdBy      User     @relation(fields: [createdById], references: [id])
-  eventId   Int
-  event     Event    @relation(fields: [eventId], references: [id])
+  id            Int            @id @default(autoincrement())
+  title         String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  createdById   Int
+  createdBy     User           @relation(fields: [createdById], references: [id])
+  eventId       Int
+  event         Event          @relation(fields: [eventId], references: [id])
   interestAreas InterestArea[]
 }
 
 model InterestArea {
-  id        Int      @id @default(autoincrement())
-  title     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  createdById    Int
-  createdBy      User     @relation(fields: [createdById], references: [id])
-  eventId   Int
-  event     Event    @relation(fields: [eventId], references: [id])
+  id                 Int              @id @default(autoincrement())
+  title              String
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  createdById        Int
+  createdBy          User             @relation(fields: [createdById], references: [id])
+  eventId            Int
+  event              Event            @relation(fields: [eventId], references: [id])
   interestCategoryId Int
   interestCategory   InterestCategory @relation(fields: [interestCategoryId], references: [id])
 }
@@ -610,12 +611,12 @@ model Question {
   editedContent String?  @db.Text
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  
+
   // Relations
-  sessionId     Int
-  session       Session  @relation(fields: [sessionId], references: [id])
-  userId        Int
-  user          User     @relation(fields: [userId], references: [id])
+  sessionId Int
+  session   Session @relation(fields: [sessionId], references: [id])
+  userId    Int
+  user      User    @relation(fields: [userId], references: [id])
 }
 
 enum AnswerType {
@@ -624,24 +625,24 @@ enum AnswerType {
 }
 
 model Poll {
-  id            Int       @id @default(autoincrement())
-  question      String
-  passCode      String?
-  pollsLimit    Int?
-  answerType    AnswerType
-  show          Boolean   @default(false)
-  sessionId     Int?
-  session       Session?  @relation(fields: [sessionId], references: [id])
-  options       Option[]
-  responses     PollResponse[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id         Int            @id @default(autoincrement())
+  question   String
+  passCode   String?
+  pollsLimit Int?
+  answerType AnswerType
+  show       Boolean        @default(false)
+  sessionId  Int?
+  session    Session?       @relation(fields: [sessionId], references: [id])
+  options    Option[]
+  responses  PollResponse[]
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
 }
 
 model Option {
-  id        Int     @id @default(autoincrement())
+  id        Int            @id @default(autoincrement())
   text      String
-  poll      Poll    @relation(fields: [pollId], references: [id])
+  poll      Poll           @relation(fields: [pollId], references: [id])
   pollId    Int
   responses PollResponse[]
 }
@@ -658,4 +659,3 @@ model PollResponse {
 
   @@unique([pollId, userId, optionId]) // Prevent duplicate responses for the same option
 }
-

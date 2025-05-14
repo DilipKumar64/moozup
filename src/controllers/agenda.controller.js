@@ -1,4 +1,5 @@
 //  Create Session Type
+const prisma = require("../config/prisma");
 const { createAwardedPerson, getAllAwardedPersons, getAwardedPersonById, updateAwardedPerson, deleteAwardedPersonById } = require("../models/awardPeople.model");
 const {
   createAwardType,
@@ -110,12 +111,6 @@ exports.DeleteSessionTypeById = async (req, res) => {
 
 exports.createSession = async (req, res) => {
   try {
-    // Validation errors from express-validator
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
-
     const {
       title,
       description,
@@ -125,76 +120,87 @@ exports.createSession = async (req, res) => {
       venue,
       hall,
       track,
+      keywords,
+      sessionTypeId,
+      eventId,
+      sponsorTypeId,
+      sponsorName, // sponsorId
+      speakerId,
+      participationTypeId,
       isSpeakathon = false,
       enableFeedback = false,
-      keywords,
-      eventId,
-      sessionTypeId,
-      participationTypeId,
-      sponsorTypeId,
-      sponsorName,
-      speakerId,
+      isLive = false,
+      wentLiveAt = null,
     } = req.body;
 
-    // Required field checks
-    const missingFields = [];
-    if (!title) missingFields.push("title");
-    if (!date) missingFields.push("date");
-    if (!startTime) missingFields.push("startTime");
-    if (!endTime) missingFields.push("endTime");
-    if (!eventId) missingFields.push("eventId");
-    if (!sessionTypeId) missingFields.push("sessionTypeId");
-    if (!participationTypeId) missingFields.push("participationTypeId");
-    if (!sponsorTypeId) missingFields.push("sponsorTypeId");
-    if (!sponsorName) missingFields.push("sponsorName");
-    if (!speakerId) missingFields.push("speakerId");
+    // 🔍 Step 1: Validate sponsorName with sponsorTypeId
+    const sponsor = await prisma.sponsor.findFirst({
+      where: {
+        id: Number(sponsorName),  // Ensure sponsorName is a number
+        sponsorTypeId: Number(sponsorTypeId),  // Ensure sponsorTypeId is a number
+      },
+    });
 
-    if (missingFields.length > 0) {
+    if (!sponsor) {
       return res.status(400).json({
-        success: false,
-        message: `Missing required fields: ${missingFields.join(", ")}`,
+        message: `Invalid sponsorName: No sponsor with ID ${sponsorName} found under sponsorTypeId ${sponsorTypeId}`,
       });
     }
 
-    // Data parsing
-    const sessionData = {
-      title,
-      description,
-      date: new Date(date),
-      startTime: new Date(startTime),
-      endTime: new Date(endTime),
-      venue,
-      hall,
-      track,
-      isSpeakathon,
-      enableFeedback,
-      keywords,
-      eventId: parseInt(eventId),
-      sessionTypeId: parseInt(sessionTypeId),
-      participationTypeId: participationTypeId
-        ? parseInt(participationTypeId)
-        : null,
-      sponsorTypeId: sponsorTypeId ? parseInt(sponsorTypeId) : null,
-      sponsorName,
-      speakerId: speakerId ? parseInt(speakerId) : null,
-    };
+    // 🔍 Step 2: Validate speakerId with participationTypeId
+    const speaker = await prisma.user.findFirst({
+      where: {
+        id: Number(speakerId),  // Ensure speakerId is a number
+        participationTypeId: Number(participationTypeId),  // Ensure participationTypeId is a number
+      },
+    });
 
-    const newSession = await createSession(sessionData);
+    if (!speaker) {
+      return res.status(400).json({
+        message: `Invalid speakerId: No speaker with ID ${speakerId} found under participationTypeId ${participationTypeId}`,
+      });
+    }
+
+    // ✅ Step 3: Create Session if both valid
+    const session = await prisma.session.create({
+      data: {
+        title,
+        description,
+        date: new Date(date),  // Ensure date is correctly parsed
+        startTime,
+        endTime,
+        venue,
+        hall,
+        track,
+        keywords,
+        isSpeakathon,
+        enableFeedback,
+        isLive,
+        wentLiveAt: wentLiveAt ? new Date(wentLiveAt) : null,  
+        sessionTypeId: Number(sessionTypeId),  
+        eventId: Number(eventId),  
+        sponsorTypeId: Number(sponsorTypeId),  
+        sponsorName: Number(sponsorName), 
+        speakerId: Number(speakerId),  
+        participationTypeId: Number(participationTypeId),  
+      },
+    });
 
     res.status(201).json({
-      success: true,
-      message: "Session created successfully",
-      data: newSession,
+      message: 'Session created successfully',
+      session,
     });
+
   } catch (error) {
-    console.error("Error creating session:", error.message);
+    console.error('Error creating session:', error);
     res.status(500).json({
-      success: false,
-      message: "Failed to create session",
-      error: error.message,
+      message: 'Failed to create session',
+      error,
     });
   }
 };
+
+
 
 // get all sessions
 exports.getAllSessions = async (req, res) => {
@@ -479,7 +485,7 @@ exports.createAwardedPerson = async (req, res) => {
 
     const { eventId, sessionId, awardId, personName } = req.body;
 
-    if (!eventId || !sessionId || !awardId || !personName ) {
+    if (!eventId || !sessionId || !awardId || !personName) {
       return res.status(400).json({
         success: false,
         message: "eventId, sessionId, awardId, personName are required",
@@ -491,7 +497,7 @@ exports.createAwardedPerson = async (req, res) => {
       sessionId: parseInt(sessionId),
       awardId: parseInt(awardId),
       personName
-      
+
     });
 
     res.status(201).json({

@@ -19,10 +19,15 @@ const deleteSponsorType = (id) => prisma.sponsorType.delete({
   where: { id: parseInt(id) }
 });
 
+const findAllSponsorTypes = () =>{
+  return prisma.sponsorType.findMany();
+}
+
 module.exports = {
   createSponsorType,
   findSponsorTypeById,
   findSponsorTypesByEventId,
   updateSponsorType,
-  deleteSponsorType
+  deleteSponsorType,
+  findAllSponsorTypes
 }; 
