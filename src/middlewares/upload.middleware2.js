@@ -39,7 +39,8 @@ const uploadFields = {
     { name: "videoUrl", maxCount: 1 },
   ]),
   publication: upload.fields([{ name: "fileUrl", maxCount: 1 }]),
-  contactExcel: upload.fields([{ name: "excelSheet", maxCount: 1 }]), // Excel sheet field
+  contactExcel: upload.fields([{ name: "excelSheet", maxCount: 1 }]),
+  venueMap:upload.fields([{name:"venueMap", maxCount:1}])
 };
 
 module.exports = uploadFields;
