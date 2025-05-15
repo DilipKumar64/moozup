@@ -50,7 +50,7 @@ app.use("/api/venueMap", vanueMapRoutes)
 
 // Health check route
 app.get("/", (req, res) => {
-  res.status(200).json({ message: "Server is running" });
+  res.status(200).json({ message: "Server is running #21" });
 });
 
 // 404 handler
