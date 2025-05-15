@@ -166,54 +166,60 @@ exports.getEventDetails = async (req, res) => {
 exports.updateEvent = async (req, res) => {
   const { id } = req.params;
   const updatedData = req.body;
-  const { logo, banner } = req.files; // Get uploaded files
+  const { logo, banner } = req.files;
 
-  // ✅ Fix: Convert strings to Date objects
+  // ✅ Convert string dates to Date objects
   if (updatedData.eventStartDate) {
     updatedData.eventStartDate = new Date(updatedData.eventStartDate);
   }
-
   if (updatedData.eventEndDate) {
     updatedData.eventEndDate = new Date(updatedData.eventEndDate);
   }
 
   try {
-    // Fetch existing event to get the current logo/banner URLs
     const existingEvent = await findEventById(id);
+    if (!existingEvent) {
+      return res.status(404).json({ message: "Event not found" });
+    }
 
     let logoUrl = existingEvent.logo;
     let bannerUrl = existingEvent.banner;
 
-    // If a new logo is uploaded, upload it and delete the old one
-    if (logo) {
-      logoUrl = await uploadToSupabase(logo[0], "logos", existingEvent.logo); // Pass the old logo URL for deletion
+    // ✅ If new logo uploaded: delete old & upload new
+    if (logo && logo[0]) {
+      if (existingEvent.logo) {
+        const logoPath = getSupabasePath(existingEvent.logo, "moozup/logos");
+        if (logoPath) await deleteFromSupabase("moozup", `logos/${logoPath}`);
+      }
+      logoUrl = await uploadToSupabase(logo[0], "logos");
     }
 
-    // If a new banner is uploaded, upload it and delete the old one
-    if (banner) {
-      bannerUrl = await uploadToSupabase(
-        banner[0],
-        "banners",
-        existingEvent.banner
-      ); // Pass the old banner URL for deletion
+    // ✅ If new banner uploaded: delete old & upload new
+    if (banner && banner[0]) {
+      if (existingEvent.banner) {
+        const bannerPath = getSupabasePath(existingEvent.banner, "moozup/banners");
+        if (bannerPath) await deleteFromSupabase("moozup", `banners/${bannerPath}`);
+      }
+      bannerUrl = await uploadToSupabase(banner[0], "banners");
     }
 
-    // Now, update the event with new logo/banner URLs and other data
+    // ✅ Update URLs in updatedData
     updatedData.logo = logoUrl;
     updatedData.banner = bannerUrl;
 
-    // Update event in the database
     const updatedEvent = await updateEventById(id, updatedData);
 
     res.status(200).json({
       message: "Event updated successfully",
       event: updatedEvent,
     });
+
   } catch (error) {
     console.error("Error updating event:", error);
-    res
-      .status(500)
-      .json({ message: "Error updating event", error: error.message });
+    res.status(500).json({
+      message: "Error updating event",
+      error: error.message,
+    });
   }
 };
 

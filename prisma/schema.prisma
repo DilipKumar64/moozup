@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserType {
+  EVENT
+  COMMUNITY
+}
+
 model User {
   id             Int       @id @default(autoincrement())
   firstName      String?
@@ -25,7 +30,8 @@ model User {
   city           String?
   state          String?
   zipCode        String?
-  phoneNumber    String?
+  phoneNumber    String    @unique
+  userType       UserType  @default(EVENT)
   phoneExtension String?
   language       String?
   country        String?
@@ -110,8 +116,9 @@ model Event {
   meraEventsId     String?
   ticketWidget     String?
   streamUrl        String?
-  logo             String? // ✅ Added
-  banner           String? // ✅ Added
+  logo             String?
+  banner           String?
+  venueMap         String?
 
   // Relations
   creatorId                 Int
@@ -661,9 +668,8 @@ model PollResponse {
   @@unique([pollId, userId, optionId]) // Prevent duplicate responses for the same option
 }
 
-
 model Contact {
-  id             String   @id @default(uuid())
+  id              String   @id @default(uuid())
   participantType String?
   title           String?
   firstName       String

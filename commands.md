@@ -33,3 +33,6 @@ npx prisma migrate reset
 
 # 📂 Open Prisma Studio (DB UI)
 npx prisma studio
+
+# update migrate
+npx prisma migrate dev --name add-venue-map

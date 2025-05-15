@@ -22,13 +22,13 @@ exports.uploadGalleryItem = async (req, res) => {
       userId,
     } = req.body;
 
-      // 🔍 Validate event
+    // 🔍 Validate event
     const event = await findEventById(eventId);
     if (!event) {
       return res.status(400).json({ message: "Invalid event ID. Event not found." });
     }
 
-        // 🔍 Validate userId
+    // 🔍 Validate userId
     const user = await findUserById(userId);
     if (!user) {
       return res.status(400).json({ message: "Invalid user ID. User not found." });

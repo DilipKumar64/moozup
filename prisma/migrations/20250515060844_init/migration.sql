@@ -1,3 +1,6 @@
+-- CreateEnum
+CREATE TYPE "AnswerType" AS ENUM ('SINGLE', 'MULTI');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" SERIAL NOT NULL,
@@ -17,7 +20,7 @@ CREATE TABLE "User" (
     "city" TEXT,
     "state" TEXT,
     "zipCode" TEXT,
-    "phoneNumber" TEXT,
+    "phoneNumber" TEXT NOT NULL,
     "phoneExtension" TEXT,
     "language" TEXT,
     "country" TEXT,
@@ -61,6 +64,8 @@ CREATE TABLE "Event" (
     "startTime" TEXT,
     "endTime" TEXT,
     "eventLocation" TEXT,
+    "latitude" DOUBLE PRECISION,
+    "longitude" DOUBLE PRECISION,
     "moozupWebsite" TEXT,
     "eventWebsite" TEXT,
     "facebookId" TEXT,
@@ -74,6 +79,7 @@ CREATE TABLE "Event" (
     "streamUrl" TEXT,
     "logo" TEXT,
     "banner" TEXT,
+    "venueMap" TEXT,
     "creatorId" INTEGER NOT NULL,
     "categoryId" INTEGER,
     "userId" INTEGER,
@@ -224,22 +230,24 @@ CREATE TABLE "Session" (
     "title" TEXT NOT NULL,
     "description" TEXT,
     "date" TIMESTAMP(3) NOT NULL,
-    "startTime" TIMESTAMP(3) NOT NULL,
-    "endTime" TIMESTAMP(3) NOT NULL,
+    "startTime" TEXT NOT NULL,
+    "endTime" TEXT NOT NULL,
     "isSpeakathon" BOOLEAN NOT NULL DEFAULT false,
     "enableFeedback" BOOLEAN NOT NULL DEFAULT false,
     "venue" TEXT,
     "hall" TEXT,
     "track" TEXT,
     "keywords" TEXT,
+    "isLive" BOOLEAN NOT NULL DEFAULT false,
+    "wentLiveAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "sessionTypeId" INTEGER NOT NULL,
     "eventId" INTEGER NOT NULL,
-    "sponsorTypeId" INTEGER,
-    "sponsorName" TEXT,
-    "speakerId" INTEGER,
-    "participationTypeId" INTEGER,
+    "sponsorTypeId" INTEGER NOT NULL,
+    "sponsorName" INTEGER NOT NULL,
+    "speakerId" INTEGER NOT NULL,
+    "participationTypeId" INTEGER NOT NULL,
 
     CONSTRAINT "Session_pkey" PRIMARY KEY ("id")
 );
@@ -454,6 +462,105 @@ CREATE TABLE "EmailTemplate" (
 );
 
 -- CreateTable
+CREATE TABLE "InterestCategory" (
+    "id" SERIAL NOT NULL,
+    "title" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdById" INTEGER NOT NULL,
+    "eventId" INTEGER NOT NULL,
+
+    CONSTRAINT "InterestCategory_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "InterestArea" (
+    "id" SERIAL NOT NULL,
+    "title" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdById" INTEGER NOT NULL,
+    "eventId" INTEGER NOT NULL,
+    "interestCategoryId" INTEGER NOT NULL,
+
+    CONSTRAINT "InterestArea_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Question" (
+    "id" SERIAL NOT NULL,
+    "content" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'pending',
+    "editedContent" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "sessionId" INTEGER NOT NULL,
+    "userId" INTEGER NOT NULL,
+
+    CONSTRAINT "Question_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Poll" (
+    "id" SERIAL NOT NULL,
+    "question" TEXT NOT NULL,
+    "passCode" TEXT,
+    "pollsLimit" INTEGER,
+    "answerType" "AnswerType" NOT NULL,
+    "show" BOOLEAN NOT NULL DEFAULT false,
+    "sessionId" INTEGER,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Poll_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Option" (
+    "id" SERIAL NOT NULL,
+    "text" TEXT NOT NULL,
+    "pollId" INTEGER NOT NULL,
+
+    CONSTRAINT "Option_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PollResponse" (
+    "id" SERIAL NOT NULL,
+    "pollId" INTEGER NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "optionId" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "PollResponse_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Contact" (
+    "id" TEXT NOT NULL,
+    "participantType" TEXT,
+    "title" TEXT,
+    "firstName" TEXT NOT NULL,
+    "lastName" TEXT NOT NULL,
+    "companyName" TEXT,
+    "jobTitle" TEXT,
+    "email" TEXT NOT NULL,
+    "phoneNumber" TEXT,
+    "imageUrl" TEXT,
+    "description" TEXT,
+    "location" TEXT,
+    "facebook" TEXT,
+    "linkedin" TEXT,
+    "twitter" TEXT,
+    "webProfile" TEXT,
+    "uid" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Contact_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "_SponsorPerson" (
     "A" INTEGER NOT NULL,
     "B" INTEGER NOT NULL,
@@ -471,6 +578,9 @@ CREATE TABLE "_ExhibitorPerson" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_phoneNumber_key" ON "User"("phoneNumber");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "EventAttendee_userId_eventId_key" ON "EventAttendee"("userId", "eventId");
@@ -492,6 +602,12 @@ CREATE UNIQUE INDEX "AwardType_awardType_key" ON "AwardType"("awardType");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Collaborator_email_key" ON "Collaborator"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PollResponse_pollId_userId_optionId_key" ON "PollResponse"("pollId", "userId", "optionId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Contact_email_key" ON "Contact"("email");
 
 -- CreateIndex
 CREATE INDEX "_SponsorPerson_B_index" ON "_SponsorPerson"("B");
@@ -572,13 +688,16 @@ ALTER TABLE "Session" ADD CONSTRAINT "Session_sessionTypeId_fkey" FOREIGN KEY ("
 ALTER TABLE "Session" ADD CONSTRAINT "Session_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Session" ADD CONSTRAINT "Session_sponsorTypeId_fkey" FOREIGN KEY ("sponsorTypeId") REFERENCES "SponsorType"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Session" ADD CONSTRAINT "Session_sponsorTypeId_fkey" FOREIGN KEY ("sponsorTypeId") REFERENCES "SponsorType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Session" ADD CONSTRAINT "Session_speakerId_fkey" FOREIGN KEY ("speakerId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Session" ADD CONSTRAINT "Session_sponsorName_fkey" FOREIGN KEY ("sponsorName") REFERENCES "Sponsor"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Session" ADD CONSTRAINT "Session_participationTypeId_fkey" FOREIGN KEY ("participationTypeId") REFERENCES "ParticipationType"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Session" ADD CONSTRAINT "Session_speakerId_fkey" FOREIGN KEY ("speakerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Session" ADD CONSTRAINT "Session_participationTypeId_fkey" FOREIGN KEY ("participationTypeId") REFERENCES "ParticipationType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "AwardType" ADD CONSTRAINT "AwardType_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -645,6 +764,42 @@ ALTER TABLE "EmailTemplate" ADD CONSTRAINT "EmailTemplate_eventId_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "EmailTemplate" ADD CONSTRAINT "EmailTemplate_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "InterestCategory" ADD CONSTRAINT "InterestCategory_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "InterestCategory" ADD CONSTRAINT "InterestCategory_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "InterestArea" ADD CONSTRAINT "InterestArea_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "InterestArea" ADD CONSTRAINT "InterestArea_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "InterestArea" ADD CONSTRAINT "InterestArea_interestCategoryId_fkey" FOREIGN KEY ("interestCategoryId") REFERENCES "InterestCategory"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Question" ADD CONSTRAINT "Question_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "Session"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Question" ADD CONSTRAINT "Question_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Poll" ADD CONSTRAINT "Poll_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "Session"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Option" ADD CONSTRAINT "Option_pollId_fkey" FOREIGN KEY ("pollId") REFERENCES "Poll"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PollResponse" ADD CONSTRAINT "PollResponse_pollId_fkey" FOREIGN KEY ("pollId") REFERENCES "Poll"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PollResponse" ADD CONSTRAINT "PollResponse_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PollResponse" ADD CONSTRAINT "PollResponse_optionId_fkey" FOREIGN KEY ("optionId") REFERENCES "Option"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_SponsorPerson" ADD CONSTRAINT "_SponsorPerson_A_fkey" FOREIGN KEY ("A") REFERENCES "Sponsor"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -11,12 +11,25 @@ const deleteUser = (id) => prisma.user.delete({
   where: { id: parseInt(id) }
 });
 
-const updateUserPassword = async (userId, hashedPassword) => {
+const updateUserPassword = async (id, hashedPassword) => {
   return await prisma.user.update({
-    where: { id: parseInt(userId) },
+    where: { id: parseInt(id) },
     data: { password: hashedPassword }
   });
 };
+
+
+const findUserByEmailOrPhone = async (identifier) => {
+  return await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: identifier },
+        { phoneNumber: identifier }
+      ]
+    }
+  });
+};
+
 
 const findUsersByEventId = (eventId, page = 1, limit = 10) => {
   const skip = (page - 1) * limit;
@@ -124,6 +137,10 @@ const findAllUser = async()=>{
     });
 }
 
+const findUserByPhone = (phoneNumber) => prisma.user.findUnique({
+  where: { phoneNumber: phoneNumber }
+});
+
 module.exports = {
   createUser,
   findUserByEmail,
@@ -136,5 +153,7 @@ module.exports = {
   bulkDeleteUsers,
   bulkUpdateDisplayOrder,
   updateUserDisplayOrder,
-  findAllUser
+  findAllUser,
+  findUserByPhone,
+  findUserByEmailOrPhone
 };
