@@ -23,11 +23,22 @@ const { initializeSocket } = require('./src/socket');
 const app = express();
 const server = http.createServer(app);
 
-// Initialize Socket.IO
-initializeSocket(server);
+// Initialize Socket.IO only if not in serverless environment
+if (process.env.NODE_ENV !== "production") {
+  initializeSocket(server);
+} else {
+  // For Vercel, we'll initialize socket in a different way
+  app.use('/socket.io', (req, res) => {
+    res.status(200).send('Socket.IO endpoint');
+  });
+}
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true
+}));
 app.use(morgan("dev"));
 app.use(express.json());
 
@@ -63,10 +74,7 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
     message: "Something went wrong!",
-    error:
-      process.env.NODE_ENV === "development"
-        ? err.message
-        : "Internal server error",
+    error: process.env.NODE_ENV === "development" ? err.message : "Internal server error",
   });
 });
 

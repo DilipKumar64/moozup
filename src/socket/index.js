@@ -13,10 +13,18 @@ let io;
 
 const initializeSocket = (server) => {
   io = socketIO(server, {
-    // No CORS needed for mobile apps
-    transports: ['websocket'], // Use WebSocket transport only
-    pingTimeout: 60000, // Increase ping timeout for mobile
-    pingInterval: 25000 // Increase ping interval for mobile
+    cors: {
+      origin: process.env.CORS_ORIGIN || "*",
+      methods: ["GET", "POST"],
+      credentials: true
+    },
+    transports: ['websocket', 'polling'], // Enable both WebSocket and polling
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    path: '/socket.io/',
+    // Add these options for better Vercel compatibility
+    allowEIO3: true,
+    maxHttpBufferSize: 1e8
   });
 
   // Authentication middleware
