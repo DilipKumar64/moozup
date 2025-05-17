@@ -15,46 +15,67 @@ require("dotenv").config();
 const nodemailer = require("nodemailer");
 const twilio = require("twilio");
 
-// Email & phone validators
+// Email, phone aur password validators
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-const isStrongPassword = (password) => typeof password === "string" && password.length >= 6;
+
+// Password ko strong karne ke liye 8+ chars, uppercase, lowercase, number, special char check
+const isStrongPassword = (password) =>
+  typeof password === "string" &&
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(password);
+
 const isValidPhoneNumber = (phoneNumber) => /^[6-9]\d{9}$/.test(phoneNumber);
 
 exports.signup = async (req, res) => {
   let { firstName, lastName, email, password, phoneNumber, userType } = req.body;
 
-  // Check all fields
+  // Basic validation: sab fields filled hain?
   if (!firstName || !lastName || !email || !password || !phoneNumber || !userType) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
-  // Validate userType
+  // userType ko normalize karo aur allowed values check karo
   userType = userType.toLowerCase();
   if (!["event", "community"].includes(userType)) {
     return res.status(400).json({ message: "userType must be either 'event' or 'community'" });
   }
+  const userTypeEnum = userType.toUpperCase();
 
-  const userTypeEnum = userType.toUpperCase(); // Prisma needs enum like 'EVENT' or 'COMMUNITY'
-
+  // Email format validation
   if (!isValidEmail(email)) {
     return res.status(400).json({ message: "Invalid email format" });
   }
 
+  // Password strong hona chahiye
   if (!isStrongPassword(password)) {
-    return res.status(400).json({ message: "Password must be at least 6 characters long" });
+    return res.status(400).json({
+      message:
+        "Password must be minimum 8 characters with uppercase, lowercase, number, and special character",
+    });
   }
 
+
   if (!isValidPhoneNumber(phoneNumber)) {
-    return res.status(400).json({ message: "Invalid phone number. It must be 10 digits and start with 6-9." });
+    return res.status(400).json({
+      message: "Invalid phone number. It must be 10 digits and start with 6-9.",
+    });
   }
 
   try {
+    
     const existingUser = await findUserByEmail(email);
     if (existingUser) {
       return res.status(400).json({ message: "Email already exists" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    //phone Number already existst
+    const existingUserByPhone = await findUserByPhone(phoneNumber);
+    if (existingUserByPhone) {
+      return res.status(400).json({ message: "Phone number already exists" });
+      }
+      
+
+    // Password hash karo (salt rounds 12 for better security)
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     const newUser = await createUser({
       firstName,
@@ -62,12 +83,12 @@ exports.signup = async (req, res) => {
       email,
       password: hashedPassword,
       phoneNumber,
-      userType: userTypeEnum, // ✅ Send correct enum value to Prisma
+      userType: userTypeEnum,
       hasLoggedIn: false,
       loginCount: 0,
     });
 
-    // Send confirmation email
+    // Nodemailer transporter setup
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -85,10 +106,8 @@ exports.signup = async (req, res) => {
   <div style="background-color: #007bff; padding: 20px; border-radius: 10px 10px 0 0; text-align: center; color: white;">
     <h2 style="margin: 0;">🎉 Welcome, ${firstName} ${lastName}!</h2>
   </div>
-  
   <div style="background-color: white; padding: 25px; border-radius: 0 0 10px 10px;">
     <p style="font-size: 16px; color: #333;">You have successfully signed up as a <strong style="color: #007bff;">${userType}</strong>.</p>
-    
     <table style="width: 100%; font-size: 15px; margin-top: 20px;">
       <tr>
         <td style="padding: 8px 0;"><strong>Email:</strong></td>
@@ -100,19 +119,16 @@ exports.signup = async (req, res) => {
       </tr>
       <tr>
         <td style="padding: 8px 0;"><strong>Password:</strong></td>
-        <td style="padding: 8px 0; color: #555;">${password}</td>
+        <td style="padding: 8px 0; color: #555;">${password}</td>  <!-- yahan plain password aa raha hai -->
       </tr>
     </table>
-
     <p style="margin-top: 30px; font-size: 15px; color: #333;">
       Thank you for registering. We're excited to have you onboard! 🚀
     </p>
-
     <div style="text-align: center; margin-top: 30px;">
       <a href="https://yourdomain.com/login" style="background-color: #007bff; color: white; text-decoration: none; padding: 12px 25px; border-radius: 5px; font-weight: bold;">Login Now</a>
     </div>
   </div>
-
   <div style="text-align: center; font-size: 12px; color: #999; margin-top: 20px;">
     &copy; ${new Date().getFullYear()} Moozup. All rights reserved.
   </div>
@@ -120,10 +136,12 @@ exports.signup = async (req, res) => {
       `,
     };
 
-    await transporter.sendMail(mailOptions);
+    transporter.sendMail(mailOptions).catch((err) => {
+      console.error("Email sending failed:", err);
+    });
 
     res.status(201).json({
-      message: "User created successfully and email sent",
+      message: "User created successfully and confirmation email sent",
       user: {
         id: newUser.id,
         firstName: newUser.firstName,
@@ -140,61 +158,96 @@ exports.signup = async (req, res) => {
 };
 
 
+
 // Twilio client
 const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
 
-// For demo: simple in-memory OTP store (replace with DB or Redis for production)
+  // OTP Store: In-memory, with expiration and retry limits (only for demo!)
+// Replace with DB or cache for production
 const otpStore = {};
 
+// Generate 6-digit OTP
 function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit OTP
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Clean expired OTPs every 10 mins to save memory (optional)
+setInterval(() => {
+  const now = Date.now();
+  for (const key in otpStore) {
+    if (otpStore[key].expiresAt < now) {
+      delete otpStore[key];
+    }
+  }
+}, 10 * 60 * 1000);
+
+function normalizePhone(phoneNumber) {
+  if (!phoneNumber) return null;
+  if (phoneNumber.startsWith("+")) return phoneNumber;
+  // Assuming India numbers - add +91 by default
+  return "+91" + phoneNumber;
 }
 
 exports.login = async (req, res) => {
   try {
     const { email, password, phoneNumber, otp } = req.body;
 
-    // OTP verification step
+    // Validate presence of either email or phoneNumber
+    if (!email && !phoneNumber) {
+      return res.status(400).json({ message: "Email or phone number is required" });
+    }
+
+    const key = email || phoneNumber;
+
+    // OTP verification block
     if (otp) {
-      const key = email || phoneNumber;
-      if (!key) return res.status(400).json({ message: "Email or Phone is required for OTP verification" });
-
-      const savedOtp = otpStore[key];
-      if (!savedOtp) {
-        return res.status(400).json({ message: "No OTP requested for this user" });
-      }
-      if (savedOtp !== otp) {
-        return res.status(400).json({ message: "Invalid OTP" });
+      const stored = otpStore[key];
+      if (!stored) {
+        return res.status(400).json({ message: "No OTP requested or OTP expired. Please request a new OTP." });
       }
 
+      if (stored.expiresAt < Date.now()) {
+        delete otpStore[key];
+        return res.status(400).json({ message: "OTP expired. Please request a new OTP." });
+      }
+
+      if (stored.otp !== otp) {
+        // Track failed attempts to prevent brute force
+        stored.failedAttempts = (stored.failedAttempts || 0) + 1;
+        if (stored.failedAttempts > 5) {
+          delete otpStore[key];
+          return res.status(429).json({ message: "Too many failed attempts. Please request a new OTP." });
+        }
+        return res.status(400).json({ message: "Invalid OTP. Try again." });
+      }
+
+      // OTP valid: cleanup and login user
       delete otpStore[key];
 
-      let user;
-      if (email) {
-        user = await findUserByEmail(email);
-      } else {
-        user = await findUserByPhone(phoneNumber);
-      }
+      // Find user by email or phone
+      let user = email ? await findUserByEmail(email) : await findUserByPhone(phoneNumber);
 
       if (!user) {
-        return res.status(400).json({ message: "User not found" });
+        return res.status(404).json({ message: "User not found" });
       }
 
+      // Update login metadata (classic stuff)
       await updateUser(user.id, {
         hasLoggedIn: true,
-        loginCount: user.loginCount + 1,
+        loginCount: (user.loginCount || 0) + 1,
       });
 
+      // JWT tokens: Short-lived access token, longer refresh token
       const accessToken = jwt.sign(
         { id: user.id, email: user.email },
         process.env.JWT_SECRET,
-        { expiresIn: "365d" }
+        { expiresIn: "1h" } // 1 hour access token lifetime (safer)
       );
 
       const refreshToken = jwt.sign(
         { id: user.id, email: user.email },
         process.env.REFRESH_TOKEN_SECRET,
-        { expiresIn: "365d" }
+        { expiresIn: "30d" }
       );
 
       return res.status(200).json({
@@ -212,9 +265,8 @@ exports.login = async (req, res) => {
       });
     }
 
-    // If OTP not provided, start login process
-
-    // Email + Password login flow
+    // Start login process if OTP is not provided
+    // Email + Password flow
     if (email) {
       if (!password) {
         return res.status(400).json({ message: "Password is required for email login" });
@@ -222,19 +274,29 @@ exports.login = async (req, res) => {
 
       const user = await findUserByEmail(email);
       if (!user) {
-        return res.status(400).json({ message: "User not found" });
+        return res.status(404).json({ message: "User not found" });
       }
 
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
-        return res.status(400).json({ message: "Invalid password" });
+        return res.status(401).json({ message: "Invalid password" });
       }
 
+      // Generate and store OTP with expiry & retry info
       const generatedOtp = generateOTP();
-      otpStore[email] = generatedOtp;
+      otpStore[email] = {
+        otp: generatedOtp,
+        expiresAt: Date.now() + 5 * 60 * 1000, // OTP valid for 5 minutes
+        failedAttempts: 0,
+        sentCount: (otpStore[email]?.sentCount || 0) + 1,
+      };
 
-      // ✅ Format phone number properly
-      const toPhone = user.phoneNumber.startsWith('+') ? user.phoneNumber : '+91' + user.phoneNumber;
+      if (otpStore[email].sentCount > 5) {
+        return res.status(429).json({ message: "Too many OTP requests. Please try again later." });
+      }
+
+      // Send OTP SMS via Twilio
+      const toPhone = normalizePhone(user.phoneNumber);
 
       await client.messages.create({
         body: `Your login OTP is: ${generatedOtp}`,
@@ -251,14 +313,23 @@ exports.login = async (req, res) => {
     if (phoneNumber) {
       const user = await findUserByPhone(phoneNumber);
       if (!user) {
-        return res.status(400).json({ message: "User not found" });
+        return res.status(404).json({ message: "User not found" });
       }
 
+      // Generate and store OTP with expiry & retry info
       const generatedOtp = generateOTP();
-      otpStore[phoneNumber] = generatedOtp;
+      otpStore[phoneNumber] = {
+        otp: generatedOtp,
+        expiresAt: Date.now() + 5 * 60 * 1000,
+        failedAttempts: 0,
+        sentCount: (otpStore[phoneNumber]?.sentCount || 0) + 1,
+      };
 
-      // ✅ Format phone number properly
-      const toPhone = phoneNumber.startsWith('+') ? phoneNumber : '+91' + phoneNumber;
+      if (otpStore[phoneNumber].sentCount > 5) {
+        return res.status(429).json({ message: "Too many OTP requests. Please try again later." });
+      }
+
+      const toPhone = normalizePhone(phoneNumber);
 
       await client.messages.create({
         body: `Your login OTP is: ${generatedOtp}`,
@@ -271,10 +342,11 @@ exports.login = async (req, res) => {
       });
     }
 
+    // If no email or phone provided (should never reach here)
     return res.status(400).json({ message: "Please provide email+password or phoneNumber" });
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({ message: "Something went wrong", error: error.message });
+    return res.status(500).json({ message: "Something went wrong", error: error.message });
   }
 };
 
