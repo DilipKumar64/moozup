@@ -9,12 +9,7 @@ const staticContentController = require("../controllers/eventApi.controller");
 const router = express.Router();
 
 // POST route to create an event
-router.post(
-  "/createEvent",
-  authenticateJWT,
-  uploadFields.eventMedia,
-  eventController.createEvent
-); // POST route to create an event
+router.post("/createEvent",authenticateJWT,uploadFields.eventMedia, eventController.createEvent); // POST route to create an event
 router.get("/getEvent", authenticateJWT, eventController.getEvents); // GET route to fetch all events
 router.get("/event/details/:id", eventController.getEventDetails); // GET route to fetch single event
 router.put("/updateEvent/:id",uploadFields.eventMedia, authenticateJWT, eventController.updateEvent); // PUT route to update an event

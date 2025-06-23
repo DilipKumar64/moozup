@@ -8,8 +8,11 @@ const createSession = (data) => {
 };
 
 //get all sessions
-const getAllSessions = () => {
+const getAllSessions = (eventId) => {
   return prisma.session.findMany({
+    where:{
+      eventId: eventId
+    },
     include: {
       event: true,
       sessionType: {
@@ -27,11 +30,11 @@ const getAllSessions = () => {
           type: true,
         },
       },
-      speaker: {
-        select: {
-          firstName: true,
-        },
-      },
+      // speaker: {
+      //   select: {
+      //     firstName: true,
+      //   },
+      // },
     },
   });
 };

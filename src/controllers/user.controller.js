@@ -1,4 +1,5 @@
 const { findUserById, updateUser, deleteUser } = require('../models/user.models');
+const { findEventsByUserId } = require('../models/eventAttendee.model');
 const { createFollow, findFollow, countFollowers, countFollowing, deleteFollow, getFollowers, getFollowing } = require('../models/follow.model');
 const { createReport } = require('../models/report.model');
 
@@ -261,4 +262,32 @@ exports.reportUser = async (req, res) => {
     console.error("Report user error:", error);
     res.status(500).json({ message: "Something went wrong", error: error.message });
   }
+};
+
+exports.getUserEvents = async (req, res) => {
+    const user = req.user;
+    console.log(user);
+    const { id } =  req.user;
+
+    if (!isIdValid(id)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    try {
+        const user = await findUserById(id);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const userEvents = await findEventsByUserId(id);
+        const events = userEvents.map(ue => ue.event);
+
+        res.status(200).json({
+            message: "User events retrieved successfully",
+            events
+        });
+    } catch (error) {
+        console.error("Get user events error:", error);
+        res.status(500).json({ message: "Something went wrong", error: error.message });
+    }
 };

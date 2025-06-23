@@ -33,8 +33,10 @@ const findSessionTypeByName = async (sessionname) => {
 };
 
 // Get all session types
-const getAllSessionTypes = async () => {
-  return await prisma.sessionType.findMany();
+const getAllSessionTypes = async (eventId) => {
+  return await prisma.sessionType.findMany({
+    where: {eventId:eventId}
+  });
 };
 
 // Get a session type by its ID

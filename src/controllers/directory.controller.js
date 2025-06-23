@@ -84,6 +84,8 @@ const {
   findInterestAreasByEventId,
   deleteInterestArea
 } = require('../models/interest.area.model');
+const { createEventAttendee, findEventAttendee } = require('../models/eventAttendee.model');
+const prisma = require('../config/prisma');
 
 const isIdValid = (id) => {
   return !isNaN(parseInt(id)) && parseInt(id) > 0;
@@ -716,7 +718,8 @@ exports.createDirectoryUser = async (req, res) => {
     twitterUrl,
     webProfile,
     uid,
-    description
+    description,
+    note
   } = req.body;
 
   // Validate required fields
@@ -727,74 +730,86 @@ exports.createDirectoryUser = async (req, res) => {
   }
 
   try {
-    // Check if user with email already exists
-    const existingUser = await findUserByEmail(email);
-    if (existingUser) {
-      return res.status(400).json({
-        message: "A user with this email already exists"
-      });
-    }
-
     // Check if participation type exists
     const participationType = await findParticipationTypeById(participationTypeId);
     if (!participationType) {
       return res.status(404).json({ message: "Participation type not found" });
     }
 
-    // Generate and hash password
-    const generatedPassword = generatePassword();
-    const hashedPassword = await bcrypt.hash(generatedPassword, 10);
+    let user;
+    // Check if user with email already exists
+    const existingUser = await findUserByEmail(email);
+    if (existingUser) {
+      user = existingUser;
+    } else {
+      // Generate and hash password
+      const generatedPassword = generatePassword();
+      const hashedPassword = await bcrypt.hash(generatedPassword, 10);
 
-    // Handle profile picture upload
-    let profilePictureUrl = null;
-    if (req.file) {
-      try {
-        profilePictureUrl = await FileService.uploadProfilePicture(req.file);
-      } catch (uploadError) {
-        return res.status(500).json({
-          message: "Failed to upload profile picture",
-          error: uploadError.message
-        });
+      // Handle profile picture upload
+      let profilePictureUrl = null;
+      if (req.file) {
+        try {
+          profilePictureUrl = await FileService.uploadProfilePicture(req.file);
+        } catch (uploadError) {
+          return res.status(500).json({
+            message: "Failed to upload profile picture",
+            error: uploadError.message
+          });
+        }
       }
+
+      // Create the user
+      user = await createUser({
+        firstName,
+        email,
+        phoneNumber,
+        // participationTypeId: parseInt(participationTypeId),
+        // Optional fields
+        companyName: companyName || null,
+        jobTitle: jobTitle || null,
+        city: city || null,
+        state: state || null,
+        country: country || null,
+        phoneExtension: phoneExtension || null,
+        facebookUrl: facebookUrl || null,
+        linkedinUrl: linkedinUrl || null,
+        twitterUrl: twitterUrl || null,
+        webProfile: webProfile || null,
+        uid: uid || null,
+        // description: description || null,
+        profilePicture: profilePictureUrl,
+        status: true,
+        role: "user",
+        password: hashedPassword
+      });
     }
 
-    // Create the user
-    const user = await createUser({
-      firstName,
-      email,
-      phoneNumber,
+    // Check if user is already in the event
+    const eventId = participationType.eventId;
+    const isUserInEvent = await findEventAttendee(user.id, eventId);
+
+    if (isUserInEvent) {
+      return res.status(200).json({
+        message: "User already in this event",
+        user: {
+          ...user,
+          password: undefined
+        }
+      });
+    }
+
+    const eventAtandee = await createEventAttendee({
+      userId: user.id,
+      eventId: eventId,
       participationTypeId: parseInt(participationTypeId),
-      // Optional fields
-      companyName: companyName || null,
-      jobTitle: jobTitle || null,
-      city: city || null,
-      state: state || null,
-      country: country || null,
-      phoneExtension: phoneExtension || null,
-      facebookUrl: facebookUrl || null,
-      linkedinUrl: linkedinUrl || null,
-      twitterUrl: twitterUrl || null,
-      webProfile: webProfile || null,
-      uid: uid || null,
       description: description || null,
-      profilePicture: profilePictureUrl,
-      status: true,
-      role: "user",
-      password: hashedPassword
+      note: note || null,
     });
 
-    // Send welcome email with generated password
-    // sendWelcomeEmail({
-    //     to: email,
-    //     firstName,
-    //     email,
-    //     password: generatedPassword
-    //   }).catch((err) => {
-    //       console.error("Failed to send welcome email:", err);
-    //   });
-
     res.status(201).json({
-      message: "User created successfully in directory",
+      message: existingUser ? "User added to event successfully" : "User created and added to event successfully",
+      eventAtandee,
       user: {
         ...user,
         password: undefined // Don't send password in response

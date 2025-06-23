@@ -27,6 +27,12 @@ const {
 // 📄 Create Session Type
 // create session
 const { validationResult } = require("express-validator"); // if you're using validation
+const { findUsersByParticipationTypeId } = require("../models/user.models");
+const { findEventAttandeeByParticipationTypeId } = require("../models/eventAttendee.model");
+
+const isIdValid = (id) => {
+  return !isNaN(parseInt(id)) && parseInt(id) > 0;
+};
 
 // Controller function to create a session type
 exports.createSessionType = async (req, res) => {
@@ -55,7 +61,13 @@ exports.createSessionType = async (req, res) => {
 // 📄 Get All Session Types
 exports.GetAllSessionTypes = async (req, res) => {
   try {
-    const types = await getAllSessionTypes();
+    const eventId = req.params.eventId;
+
+    if (!isIdValid(eventId)) {
+      return res.status(400).json({ message: "Invalid event ID" });
+    }
+
+    const types = await getAllSessionTypes(Number(eventId));
     res.status(200).json(types);
   } catch (error) {
     console.error("Get All Error:", error);
@@ -148,12 +160,8 @@ exports.createSession = async (req, res) => {
     }
 
     // 🔍 Step 2: Validate speakerId with participationTypeId
-    const speaker = await prisma.user.findFirst({
-      where: {
-        id: Number(speakerId),  // Ensure speakerId is a number
-        participationTypeId: Number(participationTypeId),  // Ensure participationTypeId is a number
-      },
-    });
+    const speaker =await findEventAttandeeByParticipationTypeId( Number(speakerId), Number(participationTypeId))
+    
 
     if (!speaker) {
       return res.status(400).json({
@@ -173,14 +181,14 @@ exports.createSession = async (req, res) => {
         hall,
         track,
         keywords,
-        isSpeakathon,
-        enableFeedback,
-        isLive,
+        isSpeakathon: isSpeakathon === "true" || isSpeakathon === true,
+        enableFeedback: enableFeedback === "true" || enableFeedback === true,
+        isLive: isLive === "true" || isLive === true,
         wentLiveAt: wentLiveAt ? new Date(wentLiveAt) : null,  
         sessionTypeId: Number(sessionTypeId),  
         eventId: Number(eventId),  
         sponsorTypeId: Number(sponsorTypeId),  
-        sponsorName: Number(sponsorName), 
+        sponsorName: Number(sponsorName),
         speakerId: Number(speakerId),  
         participationTypeId: Number(participationTypeId),  
       },
@@ -210,8 +218,12 @@ exports.getAllSessions = async (req, res) => {
     if (!errors.isEmpty()) {
       return res.status(400).json({ success: false, errors: errors.array() });
     }
+    const eventId = req.params.eventId;
 
-    const sessions = await getAllSessions();
+    if (!isIdValid(eventId)) {
+      return res.status(400).json({ message: "Invalid event ID" });
+    }
+    const sessions = await getAllSessions(Number(eventId));
 
     if (sessions.length === 0) {
       return res.status(404).json({

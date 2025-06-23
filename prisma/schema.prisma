@@ -45,44 +45,22 @@ model User {
   isMember          Boolean @default(false)
   loginCount        Int     @default(0)
 
-  // New fields addd when creating add people in directory
-  companyName         String?
-  jobTitle            String?
-  facebookUrl         String?
-  linkedinUrl         String?
-  twitterUrl          String?
-  webProfile          String?
-  displayOrder        Int                @default(0)
-  uid                 String? //@unique see later
-  description         String?            @db.Text
-  note                String?            @db.VarChar(500)
-  participationTypeId Int?
-  participationType   ParticipationType? @relation(fields: [participationTypeId], references: [id])
+  companyName String?
+  jobTitle    String?
+  facebookUrl String?
+  linkedinUrl String?
+  twitterUrl  String?
+  webProfile  String?
+  uid         String?
 
-  events         Event[]
-  // joinedEvents JoinEvent[]
   followers      Follow[]        @relation("followers")
   following      Follow[]        @relation("following")
   // Relations
-  eventAttendees EventAttendee[] // Events joined
-  createdEvents  Event[]         @relation("CreatedEvents") // Events created
+  eventAttendees EventAttendee[]
+  createdEvents  Event[]         @relation("CreatedEvents")
   EventReport    EventReport[]
   EventRSVP      EventRSVP[]
   EventInvite    EventInvite[]
-  Session        Session[]
-  sponsors       Sponsor[]       @relation("SponsorPerson")
-  exhibitors     Exhibitor[]     @relation("ExhibitorPerson")
-  questions      Question[] // Added relation for questions
-  pollResponses  PollResponse[] // Added relation for poll responses
-
-  GalleryItem        GalleryItem[]
-  staticContent      staticContent[]
-  PublicationsItem   PublicationsItem[]
-  FeatureTabSetting  FeatureTabSetting[]
-  Collaborator       Collaborator[]
-  EmailTemplate      EmailTemplate[]
-  interestCategories InterestCategory[]
-  interestAreas      InterestArea[]
 }
 
 model EventCategory {
@@ -92,56 +70,52 @@ model EventCategory {
 
   events Event[]
 
-  @@map("Event_Cateory") // Corrected typo in table name
+  @@map("Event_Cateory")
 }
 
 model Event {
-  id               Int      @id @default(autoincrement())
-  eventName        String
-  eventDescription String?  @db.Text
-  eventStartDate   DateTime
-  eventEndDate     DateTime
-  startTime        String?
-  endTime          String?
-  eventLocation    String?
-  latitude         Float?
-  longitude        Float?
-  moozupWebsite    String?
-  eventWebsite     String?
-  facebookId       String?
-  facebookPageUrl  String?
-  twitterId        String?
-  twitterPageUrl   String?
-  twitterHashtag   String?
-  linkedInPageUrl  String?
-  meraEventsId     String?
-  ticketWidget     String?
-  streamUrl        String?
-  logo             String?
-  banner           String?
-  venueMap         String?
-
-  // Relations
+  id                        Int                        @id @default(autoincrement())
+  eventName                 String
+  eventDescription          String?                    @db.Text
+  eventStartDate            DateTime
+  eventEndDate              DateTime
+  startTime                 String?
+  endTime                   String?
+  eventLocation             String?
+  latitude                  Float?
+  longitude                 Float?
+  moozupWebsite             String?
+  eventWebsite              String?
+  facebookId                String?
+  facebookPageUrl           String?
+  twitterId                 String?
+  twitterPageUrl            String?
+  twitterHashtag            String?
+  linkedInPageUrl           String?
+  meraEventsId              String?
+  ticketWidget              String?
+  streamUrl                 String?
+  logo                      String?
+  banner                    String?
+  venueMap                  String?
   creatorId                 Int
   creator                   User                       @relation("CreatedEvents", fields: [creatorId], references: [id])
   categoryId                Int?
   category                  EventCategory?             @relation(fields: [categoryId], references: [id])
-  eventAttendees            EventAttendee[] // Users who joined
+  eventAttendees            EventAttendee[]
   EventReport               EventReport[]
   EventRSVP                 EventRSVP[]
   EventInvite               EventInvite[]
-  User                      User?                      @relation(fields: [userId], references: [id])
-  userId                    Int?
-  participationTypes        ParticipationType[] // Added relation for participation types
-  sponsorTypes              SponsorType[] // Added relation for sponsor types
-  exhibitorTypes            ExhibitorType[] // Added relation for exhibitor types
-  SessionType               SessionType[] // Added relation for session types
+  participationTypes        ParticipationType[]
+  sponsorTypes              SponsorType[]
+  exhibitorTypes            ExhibitorType[]
+  SessionType               SessionType[]
   Session                   Session[]
   AwardType                 AwardType[]
   AwardedPerson             AwardedPerson[]
-  galleryItems              GalleryItem[] // Added relation for gallery items
+  galleryItems              GalleryItem[]
   staticContent             staticContent[]
-  participationTypeSettings ParticipationTypeSetting[] // Added relation for participation type settings
+  participationTypeSettings ParticipationTypeSetting[]
   PublicationsItem          PublicationsItem[]
   FeatureTabSetting         FeatureTabSetting[]
   Collaborator              Collaborator[]
@@ -151,13 +125,31 @@ model Event {
 }
 
 model EventAttendee {
-  user   User @relation(fields: [userId], references: [id])
-  userId Int
+  id                  Int                  @id @default(autoincrement())
+  user                User                 @relation(fields: [userId], references: [id])
+  userId              Int
+  event               Event                @relation(fields: [eventId], references: [id])
+  eventId             Int
+  displayOrder        Int                  @default(0)
+  description         String?              @db.Text
+  note                String?              @db.VarChar(500)
+  participationTypeId Int
+  participationType   ParticipationType?   @relation(fields: [participationTypeId], references: [id])
+  sessions            Session[]
+  sponsors            Sponsor[]            @relation("SponsorPerson")
+  exhibitors          Exhibitor[]          @relation("ExhibitorPerson")
+  questions           Question[]
+  pollResponses       PollResponse[]
+  galleryItems        GalleryItem[]
+  staticContents      staticContent[]
+  publicationsItems   PublicationsItem[]
+  featureTabSettings  FeatureTabSetting[]
+  collaborators       Collaborator[]
+  emailTemplates      EmailTemplate[]
+  interestCategories  InterestCategory[]
+  interestAreas       InterestArea[]
 
-  event   Event @relation(fields: [eventId], references: [id])
-  eventId Int
-
-  @@unique([userId, eventId]) // to prevent duplicate joins
+  @@unique([userId, eventId])
 }
 
 model EventReport {
@@ -180,7 +172,7 @@ model EventRSVP {
   event Event @relation(fields: [eventId], references: [id])
   user  User  @relation(fields: [userId], references: [id])
 
-  @@unique([eventId, userId]) // Prevent duplicate RSVP
+  @@unique([eventId, userId])
 }
 
 model EventInvite {
@@ -208,9 +200,9 @@ model Report {
   id               String   @id @default(uuid())
   reporterId       Int
   reportedItemId   Int
-  reportedItemType String // "user", "event", "community", "post", "comment"
+  reportedItemType String
   reason           String
-  status           String   @default("pending") // "pending", "reviewed", "resolved"
+  status           String   @default("pending")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -220,15 +212,14 @@ model Report {
 model ParticipationTypeSetting {
   id                 Int      @id @default(autoincrement())
   eventId            Int
-  sourceTypeId       Int // The source participation type (e.g., speaker)
-  targetTypeId       Int // The target participation type (e.g., attendee)
+  sourceTypeId       Int
+  targetTypeId       Int
   canViewProfile     Boolean  @default(false)
   canScheduleMeeting Boolean  @default(false)
   canSendMessage     Boolean  @default(false)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  // Relations
   event      Event             @relation(fields: [eventId], references: [id])
   sourceType ParticipationType @relation("SourceType", fields: [sourceTypeId], references: [id])
   targetType ParticipationType @relation("TargetType", fields: [targetTypeId], references: [id])
@@ -252,15 +243,11 @@ model ParticipationType {
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 
-  // Relation to Event
-  eventId Int
-  event   Event     @relation(fields: [eventId], references: [id])
-  Session Session[]
+  eventId        Int
+  event          Event           @relation(fields: [eventId], references: [id])
+  Session        Session[]
+  eventAttendees EventAttendee[]
 
-  // Relation to User
-  users User[]
-
-  // Relations for settings
   sourceSettings ParticipationTypeSetting[] @relation("SourceType")
   targetSettings ParticipationTypeSetting[] @relation("TargetType")
 }
@@ -273,11 +260,10 @@ model SponsorType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relation to Event
   eventId  Int
   event    Event     @relation(fields: [eventId], references: [id])
   Session  Session[]
-  sponsors Sponsor[] // Added relation for sponsors
+  sponsors Sponsor[]
 }
 
 model ExhibitorType {
@@ -288,11 +274,8 @@ model ExhibitorType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relation to Event
-  eventId Int
-  event   Event @relation(fields: [eventId], references: [id])
-
-  // Relation to Exhibitors
+  eventId    Int
+  event      Event       @relation(fields: [eventId], references: [id])
   exhibitors Exhibitor[]
 }
 
@@ -304,7 +287,6 @@ model SessionType {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Relation to Event
   eventId Int
   event   Event @relation(fields: [eventId], references: [id])
 
@@ -323,13 +305,12 @@ model Session {
   venue          String?
   hall           String?
   track          String?
-  keywords       String? // comma-separated
+  keywords       String?
   isLive         Boolean   @default(false)
   wentLiveAt     DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  // Relations
   sessionTypeId Int
   sessionType   SessionType @relation(fields: [sessionTypeId], references: [id])
 
@@ -343,7 +324,7 @@ model Session {
   sponsor     Sponsor @relation(fields: [sponsorName], references: [id])
 
   speakerId Int
-  speaker   User @relation(fields: [speakerId], references: [id])
+  speaker   EventAttendee @relation(fields: [speakerId], references: [id])
 
   participationTypeId Int
   participationType   ParticipationType @relation(fields: [participationTypeId], references: [id])
@@ -360,7 +341,6 @@ model AwardType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relation to Event
   eventId       Int
   event         Event           @relation(fields: [eventId], references: [id])
   AwardedPerson AwardedPerson[]
@@ -394,14 +374,11 @@ model Sponsor {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  // Relations
   sponsorTypeId Int
   sponsorType   SponsorType @relation(fields: [sponsorTypeId], references: [id])
 
-  // Many-to-many relation with User
-  sponsorPerson User[] @relation("SponsorPerson")
+  sponsorPersons EventAttendee[] @relation("SponsorPerson")
 
-  // Documents array
   documents SponsorDocument[]
   Session   Session[]
 }
@@ -412,7 +389,6 @@ model SponsorDocument {
   url       String
   createdAt DateTime @default(now())
 
-  // Relation to Sponsor
   sponsorId Int
   sponsor   Sponsor @relation(fields: [sponsorId], references: [id])
 }
@@ -422,7 +398,7 @@ model Exhibitor {
   name            String
   website         String
   stall           String?
-  location        String? // city
+  location        String?
   aboutCompany    String?  @db.VarChar(500)
   email           String?
   phone           String?
@@ -433,14 +409,11 @@ model Exhibitor {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  // Relations
   exhibitorTypeId Int
   exhibitorType   ExhibitorType @relation(fields: [exhibitorTypeId], references: [id])
 
-  // Many-to-many relation with User
-  exhibitorPersons User[] @relation("ExhibitorPerson")
+  exhibitorPersons EventAttendee[] @relation("ExhibitorPerson")
 
-  // Documents array
   documents ExhibitorDocument[]
 }
 
@@ -450,7 +423,6 @@ model ExhibitorDocument {
   url       String
   createdAt DateTime @default(now())
 
-  // Relation to Exhibitor
   exhibitorId Int
   exhibitor   Exhibitor @relation(fields: [exhibitorId], references: [id])
 }
@@ -465,50 +437,46 @@ model GalleryGroup {
 }
 
 model GalleryItem {
-  id         Int      @id @default(autoincrement())
-  imagelabel String?
-  Videolabel String?
-  imageUrl   String?
-  videoUrl   String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  group   GalleryGroup? @relation(fields: [groupId], references: [id])
-  groupId Int? // Changed to `Int?` to match `GalleryGroup`'s `id` field type
-  eventId Int
-  event   Event         @relation(fields: [eventId], references: [id])
-  userId  Int
-  user    User          @relation(fields: [userId], references: [id])
+  id          Int           @id @default(autoincrement())
+  imagelabel  String?
+  Videolabel  String?
+  imageUrl    String?
+  videoUrl    String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  group       GalleryGroup? @relation(fields: [groupId], references: [id])
+  groupId     Int?
+  eventId     Int
+  event       Event         @relation(fields: [eventId], references: [id])
+  attendeeId  Int
+  attendee    EventAttendee @relation(fields: [attendeeId], references: [id])
 }
 
 model staticContent {
-  id        Int      @id @default(autoincrement())
-  content   String?  @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                    Int           @id @default(autoincrement())
+  content               String?       @db.Text
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  FAQs                  String?       @db.Text
+  EventInfo             String?       @db.Text
+  Questionnaire         String?       @db.Text
+  StaticContent1        String?       @db.Text
+  StaticContent2        String?       @db.Text
+  StaticContent3        String?       @db.Text
+  StaticContent4        String?       @db.Text
+  StaticContent5        String?       @db.Text
+  StaticContent6        String?       @db.Text
+  StaticContent7        String?       @db.Text
+  NonMenuStaticContent1 String?       @db.Text
+  NonMenuStaticContent2 String?       @db.Text
+  NonMenuStaticContent3 String?       @db.Text
+  NonMenuStaticContent4 String?       @db.Text
+  NonMenuStaticContent5 String?       @db.Text
 
-  FAQs                  String? @db.Text
-  EventInfo             String? @db.Text
-  Questionnaire         String? @db.Text
-  StaticContent1        String? @db.Text
-  StaticContent2        String? @db.Text
-  StaticContent3        String? @db.Text
-  StaticContent4        String? @db.Text
-  StaticContent5        String? @db.Text
-  StaticContent6        String? @db.Text
-  StaticContent7        String? @db.Text
-  NonMenuStaticContent1 String? @db.Text
-  NonMenuStaticContent2 String? @db.Text
-  NonMenuStaticContent3 String? @db.Text
-  NonMenuStaticContent4 String? @db.Text
-  NonMenuStaticContent5 String? @db.Text
-
-  // Relation to Event
-  eventId Int
-  event   Event @relation(fields: [eventId], references: [id])
-  // Relation to User
-  userId  Int
-  user    User  @relation(fields: [userId], references: [id])
+  eventId   Int
+  event     Event         @relation(fields: [eventId], references: [id])
+  attendeeId  Int
+  attendee    EventAttendee @relation(fields: [attendeeId], references: [id])
 }
 
 model PublicationsGroup {
@@ -518,23 +486,21 @@ model PublicationsGroup {
   updatedAt DateTime @updatedAt
   order     Int      @default(0)
 
-  // galleryItems GalleryItem[]
   PublicationsItem PublicationsItem[]
 }
 
 model PublicationsItem {
-  id        Int      @id @default(autoincrement())
-  message   String? // text field (Enter Message)
-  fileUrl   String? // uploaded file (can be image, pdf, doc etc.)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  id                  Int                @id @default(autoincrement())
+  message             String?
+  fileUrl             String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
   publicationsGroup   PublicationsGroup? @relation(fields: [publicationsGroupId], references: [id])
-  publicationsGroupId Int? // Changed to `Int?` to match `GalleryGroup`'s `id` field type
+  publicationsGroupId Int?
   eventId             Int
   event               Event              @relation(fields: [eventId], references: [id])
-  userId              Int
-  user                User               @relation(fields: [userId], references: [id])
+  attendeeId          Int
+  attendee            EventAttendee      @relation(fields: [attendeeId], references: [id])
 }
 
 model FeatureTabSetting {
@@ -546,14 +512,10 @@ model FeatureTabSetting {
   action     Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-
-  userId Int
-  user   User @relation(fields: [userId], references: [id])
-
-  // Relation to Event
-  eventId Int
-
-  event Event @relation(fields: [eventId], references: [id])
+  attendeeId Int
+  attendee   EventAttendee @relation(fields: [attendeeId], references: [id])
+  eventId    Int
+  event      Event         @relation(fields: [eventId], references: [id])
 }
 
 model Collaborator {
@@ -563,29 +525,25 @@ model Collaborator {
   role      String
   createdAt DateTime @default(now())
 
-  // Relation to Event
-  eventId Int
-  event   Event @relation(fields: [eventId], references: [id])
-  // Relation to User
-  userId  Int
-  user    User  @relation(fields: [userId], references: [id])
+  eventId    Int
+  event      Event         @relation(fields: [eventId], references: [id])
+  attendeeId Int
+  attendee   EventAttendee @relation(fields: [attendeeId], references: [id])
 }
 
 model EmailTemplate {
-  id                  Int      @id @default(autoincrement())
-  type                String // Type of email (e.g., "welcome", "password_reset")
+  id                  Int           @id @default(autoincrement())
+  type                String
   templateName        String
   emailSubject        String
-  templateDescription String // Email HTML body
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  templateDescription String
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
-  // Relation to Event
-  eventId Int?
-  event   Event? @relation(fields: [eventId], references: [id])
-  // Relation to User
-  userId  Int?
-  user    User?  @relation(fields: [userId], references: [id])
+  eventId    Int?
+  event      Event?        @relation(fields: [eventId], references: [id])
+  attendeeId Int?
+  attendee   EventAttendee? @relation(fields: [attendeeId], references: [id])
 }
 
 model InterestCategory {
@@ -594,7 +552,7 @@ model InterestCategory {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   createdById   Int
-  createdBy     User           @relation(fields: [createdById], references: [id])
+  createdBy     EventAttendee  @relation(fields: [createdById], references: [id])
   eventId       Int
   event         Event          @relation(fields: [eventId], references: [id])
   interestAreas InterestArea[]
@@ -606,7 +564,7 @@ model InterestArea {
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
   createdById        Int
-  createdBy          User             @relation(fields: [createdById], references: [id])
+  createdBy          EventAttendee    @relation(fields: [createdById], references: [id])
   eventId            Int
   event              Event            @relation(fields: [eventId], references: [id])
   interestCategoryId Int
@@ -616,16 +574,15 @@ model InterestArea {
 model Question {
   id            Int      @id @default(autoincrement())
   content       String   @db.Text
-  status        String   @default("pending") // pending, approved, declined
+  status        String   @default("pending")
   editedContent String?  @db.Text
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  // Relations
-  sessionId Int
-  session   Session @relation(fields: [sessionId], references: [id])
-  userId    Int
-  user      User    @relation(fields: [userId], references: [id])
+  sessionId  Int
+  session    Session       @relation(fields: [sessionId], references: [id])
+  attendeeId Int
+  attendee   EventAttendee @relation(fields: [attendeeId], references: [id])
 }
 
 enum AnswerType {
@@ -657,16 +614,16 @@ model Option {
 }
 
 model PollResponse {
-  id        Int      @id @default(autoincrement())
-  poll      Poll     @relation(fields: [pollId], references: [id])
-  pollId    Int
-  user      User     @relation(fields: [userId], references: [id])
-  userId    Int
-  option    Option   @relation(fields: [optionId], references: [id])
-  optionId  Int
-  createdAt DateTime @default(now())
+  id         Int           @id @default(autoincrement())
+  poll       Poll          @relation(fields: [pollId], references: [id])
+  pollId     Int
+  attendeeId Int
+  attendee   EventAttendee @relation(fields: [attendeeId], references: [id])
+  option     Option        @relation(fields: [optionId], references: [id])
+  optionId   Int
+  createdAt  DateTime      @default(now())
 
-  @@unique([pollId, userId, optionId]) // Prevent duplicate responses for the same option
+  @@unique([pollId, attendeeId, optionId])
 }
 
 model Contact {

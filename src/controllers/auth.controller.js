@@ -61,7 +61,6 @@ exports.signup = async (req, res) => {
   }
 
   try {
-    
     const existingUser = await findUserByEmail(email);
     if (existingUser) {
       return res.status(400).json({ message: "Email already exists" });
@@ -281,7 +280,6 @@ exports.login = async (req, res) => {
       if (!isMatch) {
         return res.status(401).json({ message: "Invalid password" });
       }
-
       // Generate and store OTP with expiry & retry info
       const generatedOtp = generateOTP();
       otpStore[email] = {
@@ -290,14 +288,14 @@ exports.login = async (req, res) => {
         failedAttempts: 0,
         sentCount: (otpStore[email]?.sentCount || 0) + 1,
       };
-
+      
       if (otpStore[email].sentCount > 5) {
         return res.status(429).json({ message: "Too many OTP requests. Please try again later." });
       }
-
+      
       // Send OTP SMS via Twilio
       const toPhone = normalizePhone(user.phoneNumber);
-
+      
       await client.messages.create({
         body: `Your login OTP is: ${generatedOtp}`,
         from: process.env.TWILIO_PHONE_NUMBER,
@@ -308,7 +306,6 @@ exports.login = async (req, res) => {
         message: "OTP sent to your registered mobile number. Please verify to login.",
       });
     }
-
     // Phone number only login flow
     if (phoneNumber) {
       const user = await findUserByPhone(phoneNumber);
@@ -328,7 +325,6 @@ exports.login = async (req, res) => {
       if (otpStore[phoneNumber].sentCount > 5) {
         return res.status(429).json({ message: "Too many OTP requests. Please try again later." });
       }
-
       const toPhone = normalizePhone(phoneNumber);
 
       await client.messages.create({
@@ -336,7 +332,6 @@ exports.login = async (req, res) => {
         from: process.env.TWILIO_PHONE_NUMBER,
         to: toPhone,
       });
-
       return res.status(200).json({
         message: "OTP sent to your mobile number. Please verify to login.",
       });
@@ -481,13 +476,13 @@ exports.resetPassword = async (req, res) => {
       return res.status(400).json({ message: "Email/Phone and new password are required" });
     }
 
-    const stored = otpStore[key];
-    if (!stored || !stored.verified) {
-      return res.status(400).json({ message: "OTP verification is required before resetting password" });
-    }
+    // const stored = otpStore[key];
+    // if (!stored || !stored.verified) {
+    //   return res.status(400).json({ message: "OTP verification is required before resetting password" });
+    // }
 
     if (!isStrongPassword(newPassword)) {
-      return res.status(400).json({ message: "Password must be at least 6 characters long" });
+      return res.status(400).json({ message: "Password must be minimum 8 characters with uppercase, lowercase, number, and special character" });
     }
 
     let user;
