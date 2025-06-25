@@ -7,7 +7,8 @@ const findExhibitorTypeById = (id) => prisma.exhibitorType.findUnique({
 });
 
 const findExhibitorTypesByEventId = (eventId) => prisma.exhibitorType.findMany({
-  where: { eventId: parseInt(eventId) }
+  where: { eventId: parseInt(eventId) },
+  include:{exhibitors : true}
 });
 
 const updateExhibitorType = (id, data) => prisma.exhibitorType.update({
