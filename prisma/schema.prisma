@@ -149,6 +149,12 @@ model EventAttendee {
   interestCategories  InterestCategory[]
   interestAreas       InterestArea[]
 
+  // News feature relations
+  newsPosts          NewsPost[]
+  newsPostLikes      NewsPostLike[]
+  newsComments       NewsComment[]
+  newsCommentLikes   NewsCommentLike[]
+
   @@unique([userId, eventId])
 }
 
@@ -646,4 +652,54 @@ model Contact {
   uid             String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model NewsPost {
+  id          Int              @id @default(autoincrement())
+  description String?
+  images      String[]         // Array of image URLs (max 10, enforced in controller)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  attendeeId  Int
+  attendee    EventAttendee    @relation(fields: [attendeeId], references: [id])
+  likes       NewsPostLike[]
+  shares      Int              @default(0)
+  comments    NewsComment[]
+}
+
+model NewsPostLike {
+  id         Int           @id @default(autoincrement())
+  postId     Int
+  post       NewsPost      @relation(fields: [postId], references: [id])
+  attendeeId Int
+  attendee   EventAttendee @relation(fields: [attendeeId], references: [id])
+  createdAt  DateTime      @default(now())
+
+  @@unique([postId, attendeeId])
+}
+
+model NewsComment {
+  id            Int              @id @default(autoincrement())
+  postId        Int
+  post          NewsPost         @relation(fields: [postId], references: [id])
+  attendeeId    Int
+  attendee      EventAttendee    @relation(fields: [attendeeId], references: [id])
+  content       String
+  parentId      Int?             // null for top-level, set for replies
+  parent        NewsComment?     @relation("CommentReplies", fields: [parentId], references: [id])
+  replies       NewsComment[]    @relation("CommentReplies")
+  likes         NewsCommentLike[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model NewsCommentLike {
+  id         Int           @id @default(autoincrement())
+  commentId  Int
+  comment    NewsComment   @relation(fields: [commentId], references: [id])
+  attendeeId Int
+  attendee   EventAttendee @relation(fields: [attendeeId], references: [id])
+  createdAt  DateTime      @default(now())
+
+  @@unique([commentId, attendeeId])
 }

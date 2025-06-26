@@ -1279,14 +1279,13 @@ exports.updateUserDisplayOrder = async (req, res) => {
 
 exports.getUsersByParticipationType = async (req, res) => {
   const { participationTypeId } = req.params;
-
   // Validate ID
   if (!participationTypeId || isNaN(parseInt(participationTypeId)) || parseInt(participationTypeId) <= 0) {
     return res.status(400).json({
       message: "Invalid participation type ID. ID must be a positive number."
     });
   }
-
+  
   try {
     // First verify if participation type exists
     const participationType = await findParticipationTypeById(participationTypeId);
@@ -1295,6 +1294,7 @@ exports.getUsersByParticipationType = async (req, res) => {
         message: "Participation type not found"
       });
     }
+    console.log("hello=========================");
 
     const users = await findUsersByParticipationTypeId(participationTypeId);
 
