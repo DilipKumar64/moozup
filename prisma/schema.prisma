@@ -3,14 +3,15 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 enum UserType {
   EVENT
   COMMUNITY
+  BOTH
 }
 
 model User {
@@ -21,7 +22,6 @@ model User {
   password       String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
-  role           String?   @default("user")
   status         Boolean   @default(true)
   profilePicture String?
   dateOfBirth    DateTime?
@@ -29,6 +29,7 @@ model User {
   addressLine1   String?
   addressLine2   String?
   city           String?
+  role           String?   @default("user")
   state          String?
   zipCode        String?
   phoneNumber    String    @unique
@@ -59,21 +60,22 @@ model User {
   participationTypeId Int?
   participationType   ParticipationType? @relation(fields: [participationTypeId], references: [id])
 
-  events         Event[]
+  events        Event[]
+  communities   Community[]
   // joinedEvents JoinEvent[]
-  followers      Follow[]        @relation("followers")
-  following      Follow[]        @relation("following")
+  followers     Follow[]       @relation("followers")
+  following     Follow[]       @relation("following")
   // Relations
-  eventAttendees EventAttendee[] // Events joined
-  createdEvents  Event[]         @relation("CreatedEvents") // Events created
-  EventReport    EventReport[]
-  EventRSVP      EventRSVP[]
-  EventInvite    EventInvite[]
-  Session        Session[]
-  sponsors       Sponsor[]       @relation("SponsorPerson")
-  exhibitors     Exhibitor[]     @relation("ExhibitorPerson")
-  questions      Question[] // Added relation for questions
-  pollResponses  PollResponse[] // Added relation for poll responses
+  // eventAttendees EventAttendee[] // Events joined
+  createdEvents Event[]        @relation("CreatedEvents") // Events created
+  EventReport   EventReport[]
+  EventRSVP     EventRSVP[]
+  EventInvite   EventInvite[]
+  Session       Session[]
+  sponsors      Sponsor[]      @relation("SponsorPerson")
+  exhibitors    Exhibitor[]    @relation("ExhibitorPerson")
+  questions     Question[] // Added relation for questions
+  pollResponses PollResponse[] // Added relation for poll responses
 
   GalleryItem        GalleryItem[]
   staticContent      staticContent[]
@@ -83,17 +85,27 @@ model User {
   EmailTemplate      EmailTemplate[]
   interestCategories InterestCategory[]
   interestAreas      InterestArea[]
+  Comment            Comment[]
+  Post               Post[]
+  Like               Like[]
+  Notification       Notification[]
+  UserEvent          UserEvent[]
 }
 
-model EventCategory {
-  id           Int     @id @default(autoincrement())
-  categoryName String? @db.VarChar(800)
-  count        Int?
+model UserEvent {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  event     Event    @relation(fields: [eventId], references: [id])
+  eventId   Int
+  userType  UserType // to specify EVENT or COMMUNITY or BOTH for this user in this event
+  createdAt DateTime @default(now())
 
-  events Event[]
-
-  @@map("Event_Cateory") // Corrected typo in table name
+  @@unique([userId, eventId]) // ek user ek event me ek baar hi ho sakta hai
 }
+
+// EVENT NETWORKING APP SCHEMA
+
 
 model Event {
   id               Int      @id @default(autoincrement())
@@ -126,7 +138,6 @@ model Event {
   creator                   User                       @relation("CreatedEvents", fields: [creatorId], references: [id])
   categoryId                Int?
   category                  EventCategory?             @relation(fields: [categoryId], references: [id])
-  eventAttendees            EventAttendee[] // Users who joined
   EventReport               EventReport[]
   EventRSVP                 EventRSVP[]
   EventInvite               EventInvite[]
@@ -148,17 +159,33 @@ model Event {
   EmailTemplate             EmailTemplate[]
   interestCategories        InterestCategory[]
   interestAreas             InterestArea[]
+  Post                      Post[]
+  // UserEvent                 UserEvent[]
+  UserEvent                 UserEvent[]
 }
 
-model EventAttendee {
-  user   User @relation(fields: [userId], references: [id])
-  userId Int
 
-  event   Event @relation(fields: [eventId], references: [id])
-  eventId Int
+model EventCategory {
+  id           Int     @id @default(autoincrement())
+  categoryName String? @db.VarChar(800)
+  count        Int?
 
-  @@unique([userId, eventId]) // to prevent duplicate joins
+  events Event[]
+
+  @@map("Event_Cateory") // Corrected typo in table name
 }
+
+
+
+// model EventAttendee {
+//   user   User @relation(fields: [userId], references: [id])
+//   userId Int
+
+//   event   Event @relation(fields: [eventId], references: [id])
+//   eventId Int
+
+//   @@unique([userId, eventId]) // to prevent duplicate joins
+// }
 
 model EventReport {
   id        Int      @id @default(autoincrement())
@@ -543,9 +570,10 @@ model FeatureTabSetting {
   icon       String
   filledIcon String
   text       String
-  action     Boolean  @default(true)
+  isActive   Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  order      Int?
 
   userId Int
   user   User @relation(fields: [userId], references: [id])
@@ -554,6 +582,8 @@ model FeatureTabSetting {
   eventId Int
 
   event Event @relation(fields: [eventId], references: [id])
+
+  @@unique([eventId, EventTabs])
 }
 
 model Collaborator {
@@ -689,4 +719,53 @@ model Contact {
   uid             String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model Post {
+  id        Int       @id @default(autoincrement())
+  content   String
+  images    String[] // store image URLs
+  shareOn   String[] // platforms (e.g., Twitter, LinkedIn)
+  createdAt DateTime  @default(now())
+  eventId   Int
+  event     Event     @relation(fields: [eventId], references: [id])
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id])
+  comments  Comment[]
+  likes     Like[]
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  text      String
+  createdAt DateTime @default(now())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id])
+}
+
+model Like {
+  id     String @id @default(uuid())
+  userId Int
+  user   User   @relation(fields: [userId], references: [id])
+  postId Int
+  post   Post   @relation(fields: [postId], references: [id])
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  message     String
+  recipient   User     @relation(fields: [recipientId], references: [id])
+  recipientId Int
+  createdAt   DateTime @default(now())
+  read        Boolean  @default(false)
+}
+
+// EVENT COMMUNITY APP SCHEMA
+
+model Community {
+  id     Int   @id @default(autoincrement())
+  User   User? @relation(fields: [userId], references: [id])
+  userId Int?
 }

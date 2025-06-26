@@ -28,3 +28,31 @@ npx prisma migrate dev --name update-group-model
 deploy commond =>
 npx prisma migrate deploy
 
+
+
+/src
+├── modules
+│   ├── auth
+│   │   ├── controllers
+│   │   ├── services
+│   │   └── dto
+│   ├── user
+│   │   ├── controllers
+│   │   ├── services
+│   │   └── dto
+│   ├── event
+│   │   ├── controllers
+│   │   ├── services
+│   │   ├── dto
+│   │   └── entities
+│   └── community
+│       ├── controllers
+│       ├── services
+│       ├── dto
+│       └── entities
+├── prisma
+│   ├── schema.prisma
+│   └── migrations
+├── main.ts
+└── app.module.ts
+

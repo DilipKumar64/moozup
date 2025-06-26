@@ -4,22 +4,24 @@ const morgan = require("morgan");
 const http = require('http');
 require("dotenv").config();
 
-const authRoutes = require("./src/routes/auth.route");
-const eventApiRoutes = require("./src/routes/eventApi.routes");
-const userRoutes = require("./src/routes/user.routes");
-const eventCategoryRoutes = require("./src/routes/eventCategory.route");
-const directoryRoutes = require("./src/routes/directory.routes");
-const agendaRoures = require("./src/routes/agenda.route");
-const galleryRoutes = require("./src/routes/gallery.routes"); 
-const groupRoutes = require("./src/routes/group.routes");
-const publicationItemRoutes = require("./src/routes/publication.routes"); 
-const publicationGroupsRoutes = require("./src/routes/publictionGroup.routes"); 
-const collaboratorRoutes = require("./src/routes/collaborator.routes");
-const emailTemplateRoutes = require("./src/routes/emailTemplate.routes"); 
-const contactRoutes = require("./src/routes/importdata.routes")
-const engageRoutes = require("./src/routes/engage.routes");
-const vanueMapRoutes = require("./src/routes/venueMap.routes")
+const authRoutes = require("./src/auth/routes/auth.route");
+const eventApiRoutes = require("./src/event/routes/eventApi.routes");
+const userRoutes = require("./src/user/routes/user.routes");
+const eventCategoryRoutes = require("./src/event/routes/eventCategory.route");
+const directoryRoutes = require("./src/event/routes/directory.routes");
+const agendaRoures = require("./src/event/routes/agenda.route");
+const galleryRoutes = require("./src/event/routes/gallery.routes"); 
+const groupRoutes = require("./src/event/routes/group.routes");
+const publicationItemRoutes = require("./src/event/routes/publication.routes"); 
+const publicationGroupsRoutes = require("./src/event/routes/publictionGroup.routes"); 
+const collaboratorRoutes = require("./src/event/routes/collaborator.routes");
+const emailTemplateRoutes = require("./src/event/routes/emailTemplate.routes"); 
+const contactRoutes = require("./src/event/routes/importdata.routes")
+const engageRoutes = require("./src/event/routes/engage.routes");
+const vanueMapRoutes = require("./src/event/routes/venueMap.routes")
+const featureTabSettingRoutes = require('./src/event/routes/featureSetting.routes')
 const { initializeSocket } = require('./src/socket');
+const socialWallPostRoutes = require('./src/event/routes/socialaallPost.routes')
 const app = express();
 const server = http.createServer(app);
 
@@ -58,6 +60,12 @@ app.use("/api/emailTemplate",emailTemplateRoutes)
 app.use("/api/importData", contactRoutes);
 app.use("/api/engage", engageRoutes);
 app.use("/api/venueMap", vanueMapRoutes)
+app.use("/api/feature-setsing", featureTabSettingRoutes)
+
+
+
+// social wall post 
+app.use('/api/socialwallPost', socialWallPostRoutes);
 
 // Health check route
 app.get("/", (req, res) => {
