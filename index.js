@@ -20,6 +20,7 @@ const contactRoutes = require("./src/routes/importdata.routes")
 const engageRoutes = require("./src/routes/engage.routes");
 const vanueMapRoutes = require("./src/routes/venueMap.routes")
 const newsRoute = require("./src/routes/news.routes");
+const mobileRoutes = require("./src/routes/mobile.routes");
 const { initializeSocket } = require('./src/socket');
 const app = express();
 const server = http.createServer(app);
@@ -60,6 +61,7 @@ app.use("/api/importData", contactRoutes);
 app.use("/api/engage", engageRoutes);
 app.use("/api/venueMap", vanueMapRoutes)
 app.use("/api/news", newsRoute)
+app.use("/api/mobile", mobileRoutes)
 
 // Health check route
 app.get("/", (req, res) => {

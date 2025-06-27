@@ -13,24 +13,27 @@ const createNewsPost = async (req, res) => {
       return res.status(400).json({ message: 'attendeeId is required in the request body.' });
     }
     let images = [];
-    if (req.files && req.files.images) {
-      if (req.files.images.length > 10) {
-        return res.status(400).json({ message: 'You can upload up to 10 images only.' });
-      }
-      // Upload each image to Supabase and collect URLs, with error handling
-      try {
-        images = await Promise.all(
-          req.files.images.map(async (file) => {
-            try {
-              return await uploadToSupabase(file, 'news-posts');
-            } catch (uploadErr) {
-              throw new Error(`Failed to upload image: ${file.originalname || file.filename}`);
-            }
-          })
-        );
-      } catch (uploadError) {
-        return res.status(500).json({ message: uploadError.message || 'Image upload failed.' });
-      }
+
+    if (!req.files || !req.files.images) {
+      return res.status(400).json({ message: 'One image is required.' });
+    }
+
+    if (req.files.images.length > 10) {
+      return res.status(400).json({ message: 'You can upload up to 10 images only.' });
+    }
+    // Upload each image to Supabase and collect URLs, with error handling
+    try {
+      images = await Promise.all(
+        req.files.images.map(async (file) => {
+          try {
+            return await uploadToSupabase(file, 'news-posts');
+          } catch (uploadErr) {
+            throw new Error(`Failed to upload image: ${file.originalname || file.filename}`);
+          }
+        })
+      );
+    } catch (uploadError) {
+      return res.status(500).json({ message: uploadError.message || 'Image upload failed.' });
     }
     const post = await newsPostModel.createNewsPost({
       description,

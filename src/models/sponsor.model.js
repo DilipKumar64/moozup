@@ -6,7 +6,7 @@ const findSponsorById = (id) => prisma.sponsor.findUnique({
   where: { id: parseInt(id) },
   include: {
     sponsorType: true,
-    sponsorPerson: true,
+    sponsorPersons: true,
     documents: true
   }
 });
@@ -19,7 +19,7 @@ const findSponsorsByEventId = (eventId) => prisma.sponsor.findMany({
   },
   include: {
     sponsorType: true,
-    sponsorPerson: true,
+    sponsorPersons: true,
     documents: true
   }
 });
@@ -29,7 +29,7 @@ const updateSponsor = (id, data) => prisma.sponsor.update({
   data,
   include: {
     sponsorType: true,
-    sponsorPerson: true,
+    sponsorPersons: true,
     documents: true
   }
 });
@@ -40,7 +40,7 @@ const addSponsorPersons = async (sponsorId, userIds) => {
     const currentSponsor = await prisma.sponsor.findUnique({
       where: { id: parseInt(sponsorId) },
       include: {
-        sponsorPerson: {
+        sponsorPersons: {
           select: { id: true }
         }
       }
@@ -50,8 +50,8 @@ const addSponsorPersons = async (sponsorId, userIds) => {
     const updatedSponsor = await prisma.sponsor.update({
       where: { id: parseInt(sponsorId) },
       data: {
-        sponsorPerson: {
-          disconnect: currentSponsor.sponsorPerson.map(person => ({ id: person.id }))
+        sponsorPersons: {
+          disconnect: currentSponsor.sponsorPersons.map(person => ({ id: person.id }))
         }
       }
     });
@@ -60,12 +60,12 @@ const addSponsorPersons = async (sponsorId, userIds) => {
     const finalSponsor = await prisma.sponsor.update({
       where: { id: parseInt(sponsorId) },
       data: {
-        sponsorPerson: {
+        sponsorPersons: {
           connect: userIds.map(id => ({ id: parseInt(id) }))
         }
       },
       include: {
-        sponsorPerson: {
+        sponsorPersons: {
           select: {
             id: true,
             firstName: true,
@@ -143,7 +143,7 @@ const updateSponsorDisplayOrder = async (id, displayOrder) => {
     data: { displayOrder: parseInt(displayOrder) },
     include: {
       sponsorType: true,
-      sponsorPerson: true,
+      sponsorPersons: true,
       documents: true
     }
   });
@@ -167,7 +167,7 @@ const getAllSponsors = async (page = 1, limit = 10, sponsorTypeId = null) => {
     take: limit,
     include: {
       sponsorType: true,
-      sponsorPerson: true,
+      sponsorPersons: true,
       documents: true
     },
     orderBy: {
@@ -185,6 +185,26 @@ const getAllSponsors = async (page = 1, limit = 10, sponsorTypeId = null) => {
   };
 };
 
+// Get sponsors by event with limit
+const getSponsorsByEvent = async (eventId, limit = null) => {
+  return prisma.sponsor.findMany({
+    where: {
+      sponsorType: {
+        eventId: parseInt(eventId)
+      }
+    },
+    ...(limit && { take: limit }),
+    include: {
+      sponsorType: true,
+      sponsorPersons: true,
+      documents: true
+    },
+    orderBy: {
+      displayOrder: 'asc'
+    }
+  });
+};
+
 module.exports = {
   createSponsor,
   findSponsorById,
@@ -195,5 +215,6 @@ module.exports = {
   deleteSponsor,
   bulkUpdateSponsorDisplayOrder,
   updateSponsorDisplayOrder,
-  getAllSponsors
+  getAllSponsors,
+  getSponsorsByEvent
 }; 

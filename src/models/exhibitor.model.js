@@ -204,6 +204,27 @@ const getAllExhibitors = async (page = 1, limit = 10, exhibitorTypeId = null, ev
   };
 };
 
+// Get exhibitors by event with limit
+const getExhibitorsByEvent = async (eventId, limit = null) => {
+  return prisma.exhibitor.findMany({
+    where: {
+      exhibitorType: {
+        eventId: parseInt(eventId)
+      }
+    },
+    ...(limit && { take: limit }),
+    select: {
+      id: true,
+      name: true,
+      website: true,
+      logo: true
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  });
+};
+
 module.exports = {
   createExhibitor,
   findExhibitorById,
@@ -214,5 +235,6 @@ module.exports = {
   deleteExhibitor,
   bulkUpdateExhibitorDisplayOrder,
   updateExhibitorDisplayOrder,
-  getAllExhibitors
+  getAllExhibitors,
+  getExhibitorsByEvent
 }; 

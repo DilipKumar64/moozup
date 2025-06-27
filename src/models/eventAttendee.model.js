@@ -29,11 +29,28 @@ const findEventsByUserId = (userId) => {
 };
 
 // Find all users for a given event
-const findUsersByEventId = (eventId) => {
+const findUsersByEventId = (eventId, limit = null) => {
   return prisma.eventAttendee.findMany({
     where: { eventId: parseInt(eventId) },
+    ...(limit && { take: limit }),
     include: {
       user: true,
+      participationType: true,
+    },
+  });
+};
+
+// Find users by participation type with limit
+const findUsersByParticipationType = (eventId, participationTypeId, limit = null) => {
+  return prisma.eventAttendee.findMany({
+    where: { 
+      eventId: parseInt(eventId),
+      participationTypeId: parseInt(participationTypeId)
+    },
+    ...(limit && { take: limit }),
+    include: {
+      user: true,
+      participationType: true,
     },
   });
 };
@@ -65,6 +82,7 @@ module.exports = {
   findEventAttendee,
   findEventsByUserId,
   findUsersByEventId,
+  findUsersByParticipationType,
   deleteEventAttendee,
   findEventAttandeeByParticipationTypeId 
 }; 

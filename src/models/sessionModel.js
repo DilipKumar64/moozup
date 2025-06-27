@@ -8,13 +8,14 @@ const createSession = (data) => {
 };
 
 //get all sessions
-const getAllSessions = (eventId) => {
+const getAllSessions = (eventId, limit = null) => {
   return prisma.session.findMany({
     where:{
       eventId: eventId
     },
+    ...(limit && { take: limit }),
     include: {
-      event: true,
+      // event: true,
       sessionType: {
         select: {
           sessionname: true,
