@@ -6,9 +6,11 @@
   "scripts": {
     "test": "jest",
     "dev": "nodemon index.js",
-    "start": "node index.js",
+    "start": "pm2 start index.js --name moozup",
     "build": "prisma generate",
-    "vercel-build": "prisma generate"
+    "vercel-build": "prisma generate",
+    "restart": "pm2 delete moozup && npm run start",
+    "restart-l": "pm2 delete moozup && npm run start && pm2 logs moozup"
   },
   "keywords": [],
   "author": "",
