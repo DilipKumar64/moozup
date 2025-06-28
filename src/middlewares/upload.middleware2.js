@@ -41,7 +41,8 @@ const uploadFields = {
   publication: upload.fields([{ name: "fileUrl", maxCount: 1 }]),
   contactExcel: upload.fields([{ name: "excelSheet", maxCount: 1 }]),
   venueMap:upload.fields([{name:"venueMap", maxCount:1}]),
-  newsPostImages: upload.fields([{ name: "images", maxCount: 10 }])
+  newsPostImages: upload.fields([{ name: "images", maxCount: 10 }]),
+  image: upload.fields([{name:"image", maxCount:1}])
 
 };
 

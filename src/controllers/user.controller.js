@@ -2,6 +2,9 @@ const { findUserById, updateUser, deleteUser } = require('../models/user.models'
 const { findEventsByUserId } = require('../models/eventAttendee.model');
 const { createFollow, findFollow, countFollowers, countFollowing, deleteFollow, getFollowers, getFollowing } = require('../models/follow.model');
 const { createReport } = require('../models/report.model');
+const deleteFromSupabase = require('../utils/deleteFromSupabase');
+const getSupabasePath = require('../utils/getSupabasePath');
+const uploadToSupabase = require('../utils/uploadToSupabase');
 
 const isIdValid = (id) => {
     return !isNaN(parseInt(id)) && parseInt(id) > 0;
@@ -41,7 +44,6 @@ exports.updateProfile = async (req, res) => {
         firstName, 
         lastName, 
         email, // We'll keep this in destructuring but won't use it
-        profilePicture,
         dateOfBirth,
         gender,
         addressLine1,
@@ -75,7 +77,15 @@ exports.updateProfile = async (req, res) => {
         if (!existingUser) {
             return res.status(404).json({ message: "User not found" });
         }
+        let profilePicture = null;
+        if(req.files?.image?.length>0){
+          if(existingUser.profilePicture){
+            const imagepath = getSupabasePath(existingUser.profilePicture,"moozup/profilePicturs");
+            if(imagepath) await deleteFromSupabase("moozup", `profilePictures/${imagepath}`);
+          }
 
+         profilePicture = await uploadToSupabase(req.files.image[0],"profilePicture");
+        }
         // Update user profile
         const updatedUser = await updateUser(id, {
             firstName,
