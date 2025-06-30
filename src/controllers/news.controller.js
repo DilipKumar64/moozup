@@ -4,6 +4,11 @@ const newsPostLikeModel = require('../models/news.postlike.model');
 const newsCommentLikeModel = require('../models/news.commentlike.model');
 const uploadToSupabase = require('../utils/uploadToSupabase');
 const prisma = require('../config/prisma');
+const { findEventAttandeeForComment } = require('../models/eventAttendee.model');
+
+const isIdValid = (id) => {
+  return !isNaN(parseInt(id)) && parseInt(id) > 0;
+};
 
 // Create a news post (with up to 10 images)
 const createNewsPost = async (req, res) => {
@@ -17,6 +22,7 @@ const createNewsPost = async (req, res) => {
     if (!req.files || !req.files.images) {
       return res.status(400).json({ message: 'One image is required.' });
     }
+
 
     if (req.files.images.length > 10) {
       return res.status(400).json({ message: 'You can upload up to 10 images only.' });
@@ -62,7 +68,25 @@ const likeOrUnlikeNewsPost = async (req, res) => {
   try {
     const { id } = req.params; // postId
     const {attendeeId} = req.body;
-    // Try to like, if already liked, then unlike
+
+    if(!id || !attendeeId){
+      return res.status(400).json({message: "Required fields not provided"})
+    }
+    if (!isIdValid(id) || !isIdValid(attendeeId)) {
+      return res.status(400).json({ message: "Ids not valid" });
+    }
+  
+    const newsPost = await newsPostModel.checkPostExitst(Number(id));
+    if(!newsPost){
+      return res.status(400).json({message : "News post not found."})
+    }
+    
+    const attendee = await findEventAttandeeForComment(Number(attendeeId));
+    if(!attendee){
+      console.log("5")
+      return res.status(400).json({message : "User not found"})
+    }
+
     try {
       await newsPostModel.likeNewsPost(id, attendeeId);
       return res.json({ liked: true });
@@ -78,8 +102,20 @@ const likeOrUnlikeNewsPost = async (req, res) => {
 
 // Increment share count
 const incrementShareCount = async (req, res) => {
+  const { id } = req.params;
+
+  if(!id){
+    return res.status(400).json({message: "Required fields not provided"})
+  }
+  if (!isIdValid(id) ) {
+    return res.status(400).json({ message: "Id not valid" });
+  }
+
+  const post = await newsPostModel.checkPostExitst(Number(id));
+  if(!post){
+    return res.status(400).json({message : "News post not found."})
+  }
   try {
-    const { id } = req.params;
     const post = await newsPostModel.incrementShareCount(id);
     res.json({ shares: post.shares });
   } catch (err) {
@@ -96,13 +132,24 @@ const createNewsComment = async (req, res) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
+    const newsPost = await newsPostModel.checkPostExitst(postId);
+    if(!newsPost){
+      return res.status(400).json({message : "News post not found."})
+    }
+
+
+    const attendee = await findEventAttandeeForComment(attendeeId);
+
+    if(!attendee){
+      return res.status(400).json({message : "User not found"})
+    }
     const comment = await newsCommentModel.createNewsComment({
       postId: parseInt(postId),
       attendeeId: parseInt(attendeeId),
       content,
       parentId: null
     });
-    res.status(201).json(comment);
+    res.status(201).json({...comment, attendee});
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -135,6 +182,22 @@ const likeOrUnlikeNewsComment = async (req, res) => {
   try {
     const { commentId } = req.params;
     const {attendeeId} = req.body;
+
+    if(!commentId || !attendeeId ){
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const comment = await newsCommentModel.checkCommentExists(Number(commentId));
+    if(!comment){
+      return res.status(400).json({message : "Comment not found."})
+    }
+
+
+    const attendee = await findEventAttandeeForComment(attendeeId);
+
+    if(!attendee){
+      return res.status(400).json({message : "User not found"})
+    }
     try {
       await newsCommentModel.likeNewsComment(commentId, attendeeId);
       return res.json({ liked: true });

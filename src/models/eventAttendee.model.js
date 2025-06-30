@@ -77,6 +77,23 @@ const findEventAttandeeByParticipationTypeId = (eventAttandeeId, participationTy
   })
 }
 
+const findEventAttandeeForComment = (id) => {
+  return prisma.eventAttendee.findFirst({
+    where: {
+      id: id
+    },
+    select: {
+      id: true,
+      user: {
+        select: {
+          profilePicture: true,
+          firstName: true
+        }
+      }
+    }
+  })
+}
+
 module.exports = {
   createEventAttendee,
   findEventAttendee,
@@ -84,5 +101,6 @@ module.exports = {
   findUsersByEventId,
   findUsersByParticipationType,
   deleteEventAttendee,
-  findEventAttandeeByParticipationTypeId 
+  findEventAttandeeByParticipationTypeId ,
+  findEventAttandeeForComment
 }; 

@@ -38,11 +38,20 @@ const unlikeNewsComment = (commentId, attendeeId) => prisma.newsCommentLike.dele
   where: { commentId_attendeeId: { commentId: parseInt(commentId), attendeeId: parseInt(attendeeId) } }
 });
 
+const checkCommentExists = (id)=>{
+  return prisma.newsComment.findFirst({
+    where: {
+      id: id
+    },
+    select : false
+  })
+}
 module.exports = {
   createNewsComment,
   findNewsCommentById,
   findCommentsByPostId,
   findRepliesByCommentId,
   likeNewsComment,
-  unlikeNewsComment
+  unlikeNewsComment,
+  checkCommentExists
 }; 

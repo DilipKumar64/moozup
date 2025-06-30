@@ -44,10 +44,59 @@ const getNewsPostsByEvent = (eventId, skip = 0, take = 10) =>
     orderBy: { createdAt: 'desc' },
     skip,
     take,
-    include: {
-      comments: true
+    select: {
+      id: true,
+      description: true,
+      images: true,
+      createdAt: true,
+      updatedAt: true,
+      attendeeId: true,
+      shares: true,
+      attendee: {
+        select: {
+          id: true,
+          user: {
+            select: {
+              firstName: true,
+              profilePicture: true
+            }
+          }
+        }
+      },
+      comments: {
+        select: {
+          id: true,
+          postId: true,
+          attendeeId: true,
+          content: true,
+          parentId: true,
+          createdAt: true,
+          updatedAt: true,
+          attendee: {
+            select: {
+              id: true,
+              user: {
+                select: {
+                  firstName: true,
+                  profilePicture: true
+                }
+              }
+            }
+          }
+        }
+      }
     }
   });
+
+const checkPostExitst = (id)=>{
+  return prisma.newsPost.findFirst({
+    where: {
+      id: id
+    }, 
+    include: false
+  }
+  )
+}
 
 module.exports = {
   createNewsPost,
@@ -57,5 +106,6 @@ module.exports = {
   likeNewsPost,
   unlikeNewsPost,
   incrementShareCount,
-  getNewsPostsByEvent
+  getNewsPostsByEvent,
+  checkPostExitst
 }; 

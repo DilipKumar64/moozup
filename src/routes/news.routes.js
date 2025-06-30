@@ -17,7 +17,7 @@ router.post('/:id/like', authenticateJWT, newsController.likeOrUnlikeNewsPost);
 router.post('/:id/share', authenticateJWT, newsController.incrementShareCount);
 
 // Comment on a post (top-level)
-router.post('/:id/comment', authenticateJWT, newsController.createNewsComment);
+router.post('/comment', authenticateJWT, newsController.createNewsComment);
 
 // Reply to a comment (only to top-level)
 router.post('/comment/:commentId/reply', authenticateJWT, newsController.replyToNewsComment);
