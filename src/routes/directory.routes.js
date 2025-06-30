@@ -60,7 +60,8 @@ const {
   deleteInterestArea,
   getAllParticipationTypes,
   getSponsorTypes,
-  findAllUser
+  findAllUser,
+  getContacts
 } = require('../controllers/directory.controller');
 const uploadFields = require("../middlewares/upload.middleware2");
 

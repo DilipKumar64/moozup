@@ -1,10 +1,10 @@
 const { getAllSessions } = require('../models/sessionModel');
-const { findParticipationTypesByEventId } = require('../models/participation.type.model');
-const { findUsersByEventId, findUsersByParticipationType } = require('../models/eventAttendee.model');
+const { findParticipationTypesByEventId, findParticipationTypeById } = require('../models/participation.type.model');
+const { findUsersByEventId, findUsersByParticipationType, findAttendeesByParticipationType } = require('../models/eventAttendee.model');
 const { findSponsorTypesByEventId } = require('../models/sponsor.types.model');
-const { getSponsorsByEvent } = require('../models/sponsor.model');
+const { getSponsorsByEvent, getSponsorsForDirectory } = require('../models/sponsor.model');
 const { findExhibitorTypesByEventId } = require('../models/exhibitor.type.model');
-const { getExhibitorsByEvent } = require('../models/exhibitor.model');
+const { getExhibitorsByEvent, getExhibitorsForDirectory } = require('../models/exhibitor.model');
 const { getNewsPostsByEvent } = require('../models/news.post.model');
 
 const isIdValid = (id) => {
@@ -97,3 +97,64 @@ exports.getEventData = async (req, res) => {
         res.status(500).json({ message: "Something went wrong", error: error.message });
     }
 }; 
+
+exports.getContacts = async (req, res) => {
+    try {
+      const { eventId, filterType, filterId } = req.query;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.pageSize) || 10;
+  
+      if (!isIdValid(eventId)) {
+        return res.status(400).json({ message: "A valid eventId is required." });
+      }
+  
+      let data;
+  
+      switch (filterType) {
+        case "Participation":
+          if (!isIdValid(filterId)) {
+            return res
+              .status(400)
+              .json({ message: "A valid filterId for Participation is required." });
+          }
+
+          const participationType = await findParticipationTypeById(filterId);
+          if (
+            !participationType ||
+            participationType.eventId !== parseInt(eventId)
+          ) {
+            return res
+              .status(404)
+              .json({ message: "Participation type not found for this event." });
+          }
+          data = await findAttendeesByParticipationType(
+            eventId,
+            filterId,
+            page,
+            limit,
+          );
+          break;
+  
+        case "Sponsor":
+          data = await getSponsorsForDirectory(eventId, page, limit);
+          break;
+  
+        case "Exhibitor":
+          data = await getExhibitorsForDirectory(eventId, page, limit);
+          break;
+  
+        default:
+          return res.status(400).json({
+            message:
+              "A valid filterType (Participation, Sponsor, or Exhibitor) is required.",
+          });
+      }
+  
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching contacts:", error);
+      res
+        .status(500)
+        .json({ message: "An error occurred while fetching directory contacts." });
+    }
+};

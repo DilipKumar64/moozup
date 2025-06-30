@@ -225,6 +225,42 @@ const getExhibitorsByEvent = async (eventId, limit = null) => {
   });
 };
 
+const getExhibitorsForDirectory = async (eventId, page = 1, limit = 10) => {
+  const skip = (page - 1) * limit;
+  const where = {
+    exhibitorType: {
+      eventId: parseInt(eventId),
+    },
+  };
+
+  const [exhibitors, total] = await prisma.$transaction([
+    prisma.exhibitor.findMany({
+      where,
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        name: true,
+        website: true,
+        logo: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    }),
+    prisma.exhibitor.count({ where }),
+  ]);
+
+  return {
+    data: exhibitors,
+    total,
+    currentPage: page,
+    totalPages: Math.ceil(total / limit),
+    hasNextPage: skip + limit < total,
+    hasPreviousPage: page > 1,
+  };
+};
+
 module.exports = {
   createExhibitor,
   findExhibitorById,
@@ -236,5 +272,6 @@ module.exports = {
   bulkUpdateExhibitorDisplayOrder,
   updateExhibitorDisplayOrder,
   getAllExhibitors,
-  getExhibitorsByEvent
+  getExhibitorsByEvent,
+  getExhibitorsForDirectory,
 }; 

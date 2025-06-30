@@ -47,13 +47,15 @@ const {
   addExhibitorPersons,
   addExhibitorDocument,
   getAllExhibitors,
-  deleteExhibitor
+  deleteExhibitor,
+  getExhibitorsByEvent,
+  getExhibitorsForDirectory
 } = require('../models/exhibitor.model');
 
 const FileService = require('../services/file.service');
 const { sendWelcomeEmail, sendPasswordEmail } = require('../utils/mailer');
 const bcrypt = require('bcrypt');
-const { createSponsor, findSponsorById, updateSponsor, addSponsorPersons, addSponsorDocument, deleteSponsor, bulkUpdateSponsorDisplayOrder, updateSponsorDisplayOrder, getAllSponsors } = require('../models/sponsor.model');
+const { createSponsor, findSponsorById, updateSponsor, addSponsorPersons, addSponsorDocument, deleteSponsor, bulkUpdateSponsorDisplayOrder, updateSponsorDisplayOrder, getAllSponsors, getSponsorsByEvent, getSponsorsForDirectory } = require('../models/sponsor.model');
 
 const {
   createParticipationTypeSetting,
@@ -84,7 +86,7 @@ const {
   findInterestAreasByEventId,
   deleteInterestArea
 } = require('../models/interest.area.model');
-const { createEventAttendee, findEventAttendee } = require('../models/eventAttendee.model');
+const { createEventAttendee, findEventAttendee, findAttendeesByParticipationType } = require('../models/eventAttendee.model');
 const prisma = require('../config/prisma');
 
 const isIdValid = (id) => {

@@ -94,6 +94,51 @@ const findEventAttandeeForComment = (id) => {
   })
 }
 
+const findAttendeesByParticipationType = async (
+  eventId,
+  participationTypeId,
+  page = 1,
+  limit = 10,
+) => {
+  const skip = (page - 1) * limit;
+  const where = {
+    eventId: parseInt(eventId),
+    participationTypeId: parseInt(participationTypeId),
+  };
+
+  const [data, total] = await prisma.$transaction([
+    prisma.eventAttendee.findMany({
+      where,
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        user: {
+          select: {
+            firstName: true,
+            profilePicture: true,
+            companyName: true,
+            jobTitle: true,
+          },
+        },
+      },
+      orderBy: {
+        id: "asc",
+      },
+    }),
+    prisma.eventAttendee.count({ where }),
+  ]);
+
+  return {
+    data,
+    total,
+    currentPage: page,
+    totalPages: Math.ceil(total / limit),
+    hasNextPage: skip + limit < total,
+    hasPreviousPage: page > 1,
+  };
+};
+
 module.exports = {
   createEventAttendee,
   findEventAttendee,
@@ -101,6 +146,7 @@ module.exports = {
   findUsersByEventId,
   findUsersByParticipationType,
   deleteEventAttendee,
-  findEventAttandeeByParticipationTypeId ,
-  findEventAttandeeForComment
+  findEventAttandeeByParticipationTypeId,
+  findEventAttandeeForComment,
+  findAttendeesByParticipationType,
 }; 

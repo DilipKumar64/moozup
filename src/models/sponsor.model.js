@@ -205,6 +205,42 @@ const getSponsorsByEvent = async (eventId, limit = null) => {
   });
 };
 
+const getSponsorsForDirectory = async (eventId, page = 1, limit = 10) => {
+  const skip = (page - 1) * limit;
+  const where = {
+    sponsorType: {
+      eventId: parseInt(eventId),
+    },
+  };
+
+  const [sponsors, total] = await prisma.$transaction([
+    prisma.sponsor.findMany({
+      where,
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        logo: true,
+        name: true,
+        website: true,
+      },
+      orderBy: {
+        displayOrder: "asc",
+      },
+    }),
+    prisma.sponsor.count({ where }),
+  ]);
+
+  return {
+    data: sponsors,
+    total,
+    currentPage: page,
+    totalPages: Math.ceil(total / limit),
+    hasNextPage: skip + limit < total,
+    hasPreviousPage: page > 1,
+  };
+};
+
 module.exports = {
   createSponsor,
   findSponsorById,
@@ -216,5 +252,6 @@ module.exports = {
   bulkUpdateSponsorDisplayOrder,
   updateSponsorDisplayOrder,
   getAllSponsors,
-  getSponsorsByEvent
+  getSponsorsByEvent,
+  getSponsorsForDirectory,
 }; 
