@@ -1982,10 +1982,10 @@ exports.updateExhibitor = async (req, res) => {
 
 exports.addExhibitorPersons = async (req, res) => {
   const { id } = req.params;
-  const { userIds } = req.body;
+  const { attendeeIds } = req.body;
 
   // Validate input
-  if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+  if (!attendeeIds || !Array.isArray(attendeeIds) || attendeeIds.length === 0) {
     return res.status(400).json({
       message: "Please provide an array of user IDs"
     });
@@ -2001,24 +2001,24 @@ exports.addExhibitorPersons = async (req, res) => {
     }
 
     // Validate all user IDs are numbers
-    const invalidIds = userIds.filter(id => isNaN(parseInt(id)));
+    const invalidIds = attendeeIds.filter(id => isNaN(parseInt(id)));
     if (invalidIds.length > 0) {
       return res.status(400).json({
-        message: "Invalid user IDs provided",
+        message: "Invalid attendee IDs provided",
         invalidIds
       });
     }
 
     // Validate all users exist
-    const userValidationPromises = userIds.map(async (userId) => {
-      const user = await findUserById(userId);
-      return { userId, exists: !!user };
+    const userValidationPromises = attendeeIds.map(async (attendeeId) => {
+      const user = await checkEventAttendeeExists(attendeeId);
+      return { attendeeId, exists: !!user };
     });
 
     const userValidations = await Promise.all(userValidationPromises);
     const nonExistentUsers = userValidations
       .filter(validation => !validation.exists)
-      .map(validation => validation.userId);
+      .map(validation => validation.attendeeId);
 
     if (nonExistentUsers.length > 0) {
       return res.status(404).json({
@@ -2028,16 +2028,16 @@ exports.addExhibitorPersons = async (req, res) => {
     }
 
     // Add users to exhibitor
-    const updatedExhibitor = await addExhibitorPersons(id, userIds);
+    const updatedExhibitor = await addExhibitorPersons(id, attendeeIds);
 
     res.status(200).json({
       message: "Exhibitor persons added successfully",
       exhibitorPersons: updatedExhibitor.exhibitorPersons.map(person => ({
         id: person.id,
-        name: `${person.firstName} ${person.lastName || ''}`.trim(),
-        profilePicture: person.profilePicture
+        name: `${person.user.firstName} ${person.user.lastName || ''}`.trim(),
+        profilePicture: person.user.profilePicture 
       }))
-    });
+    })
   } catch (error) {
     console.error("Add exhibitor persons error:", error);
     res.status(500).json({

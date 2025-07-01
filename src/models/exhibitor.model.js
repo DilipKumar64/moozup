@@ -80,9 +80,13 @@ const addExhibitorPersons = async (exhibitorId, userIds) => {
         exhibitorPersons: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
-            profilePicture: true
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                profilePicture: true
+              }
+            }
           }
         }
       }
