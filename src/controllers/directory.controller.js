@@ -86,7 +86,7 @@ const {
   findInterestAreasByEventId,
   deleteInterestArea
 } = require('../models/interest.area.model');
-const { createEventAttendee, findEventAttendee, findAttendeesByParticipationType, checkEventAttendeeExists } = require('../models/eventAttendee.model');
+const { createEventAttendee, findEventAttendee, findAttendeesByParticipationType, checkEventAttendeeExists, updateEventAttendeeAndUser } = require('../models/eventAttendee.model');
 const prisma = require('../config/prisma');
 
 const isIdValid = (id) => {
@@ -851,8 +851,17 @@ exports.updateDirectoryUser = async (req, res) => {
   } = req.body;
 
   try {
+
+    if(!isIdValid(id)){
+      return res.status(400).json({message:"Id not valid"});
+    }
+    // check if attendee exits
+    const attandee = await checkEventAttendeeExists(id)
+    if(!attandee){
+      return res.status(400).json({message:"Attendee not found"})
+    }
     // Check if user exists
-    const existingUser = await findUserById(id);
+    const existingUser = await findUserById(attandee.user.id);
     if (!existingUser) {
       return res.status(404).json({
         message: "User not found"
@@ -896,11 +905,10 @@ exports.updateDirectoryUser = async (req, res) => {
     }
 
     // Prepare update data
-    const updateData = {
+    const updateUserData = {
       firstName: firstName || existingUser.firstName,
       email: email || existingUser.email,
       phoneNumber: phoneNumber || existingUser.phoneNumber,
-      participationTypeId: participationTypeId ? parseInt(participationTypeId) : existingUser.participationTypeId,
       companyName: companyName !== undefined ? companyName : existingUser.companyName,
       jobTitle: jobTitle !== undefined ? jobTitle : existingUser.jobTitle,
       city: city !== undefined ? city : existingUser.city,
@@ -915,15 +923,29 @@ exports.updateDirectoryUser = async (req, res) => {
       description: description !== undefined ? description : existingUser.description,
       profilePicture: profilePictureUrl
     };
+    
+    const updateattendeeData = {
+      participationTypeId: participationTypeId ? parseInt(participationTypeId) : existingUser.participationTypeId,
 
-    // Update the user
-    const updatedUser = await updateUser(id, updateData);
+    }
+    const data =await updateEventAttendeeAndUser(Number(existingUser.id),id,updateUserData,updateattendeeData);
 
     res.status(200).json({
       message: "User updated successfully",
       user: {
-        ...updatedUser,
-        password: undefined // Don't send password in response
+        ...data.user,
+        password: undefined, // Don't send password in response
+        role: null,
+        userType: null,
+        followersCount: null,
+        followingCount: null,
+        hasLoggedIn: null,
+        hasPendingMeeting: null,
+        isMember: null,
+        loginCount: null,
+        id: data.attendee.id,
+        participationTypeId: data.attendee.participationTypeId
+        
       }
     });
   } catch (error) {
@@ -1637,7 +1659,6 @@ exports.getSponsorByid = async (req,res)=>{
     });
 
   }catch (e){
-    console.log(e.message)
     return res.status(500).json({message:"Something went wrong.",error: e.message})
   }
 }

@@ -140,9 +140,37 @@ const findAttendeesByParticipationType = async (
 };
 const checkEventAttendeeExists =(id)=>{
   return prisma.eventAttendee.findUnique({
-    where: {id:id},
-    include:false
+    where: {id:parseInt(id)},
+    select:{
+      user: {
+        select: {
+          id: true
+        }
+      }
+    }
   })
+}
+
+const updateEventAttendeeAndUser =async (userId,attendeeId,userData,attendeeData)=>{
+  const [user,attendee]= await prisma.$transaction([
+  prisma.user.update({
+      where: {
+        id: Number(userId)
+      },
+      data: userData,
+    }),
+    prisma.eventAttendee.update({
+      where:{
+        id: Number(attendeeId),
+      },
+      data: attendeeData
+    })
+  ]);
+
+  return {
+    user,
+    attendee
+  }
 }
 module.exports = {
   createEventAttendee,
@@ -154,5 +182,6 @@ module.exports = {
   findEventAttandeeByParticipationTypeId,
   findEventAttandeeForComment,
   findAttendeesByParticipationType,
-  checkEventAttendeeExists
+  checkEventAttendeeExists,
+  updateEventAttendeeAndUser
 }; 
