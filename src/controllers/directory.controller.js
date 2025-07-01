@@ -86,7 +86,7 @@ const {
   findInterestAreasByEventId,
   deleteInterestArea
 } = require('../models/interest.area.model');
-const { createEventAttendee, findEventAttendee, findAttendeesByParticipationType, checkEventAttendeeExists, updateEventAttendeeAndUser } = require('../models/eventAttendee.model');
+const { createEventAttendee, findEventAttendee, findAttendeesByParticipationType, checkEventAttendeeExists, updateEventAttendeeAndUser, deleteEventAttendee, updateEventAttendee } = require('../models/eventAttendee.model');
 const prisma = require('../config/prisma');
 
 const isIdValid = (id) => {
@@ -957,29 +957,20 @@ exports.updateDirectoryUser = async (req, res) => {
 };
 
 exports.deleteDirectoryUser = async (req, res) => {
-  const { id } = req.params;
+  const { attendeeId, eventId} = req.query;
 
   try {
+
+    if(!isIdValid(attendeeId)|| !isIdValid(eventId)) {
+      return res.status(400).json({message: "Invalid ids."})
+    }
     // Check if user exists
-    const existingUser = await findUserById(id);
-    if (!existingUser) {
-      return res.status(404).json({
-        message: "User not found"
-      });
+    const attandee = await checkEventAttendeeExists(Number( attendeeId))
+    if(!attandee){
+      return res.status(400).json({message:"Attendee not found"})
     }
 
-    // Delete profile picture if it exists
-    if (existingUser.profilePicture) {
-      try {
-        await FileService.deleteProfilePicture(existingUser.profilePicture);
-      } catch (uploadError) {
-        // Log error but continue with user deletion
-        console.error('Failed to delete profile picture:', uploadError);
-      }
-    }
-
-    // Delete the user
-    await deleteUser(id);
+    await deleteEventAttendee(Number(attendeeId),Number(eventId));
 
     res.status(200).json({
       message: "User deleted successfully"
@@ -996,6 +987,11 @@ exports.updateUserNote = async (req, res) => {
   const { id } = req.params;
   const { note } = req.body;
 
+
+  if(!isIdValid(id)){
+    return res.status(400).json({message:"Invalid attendee id."})
+  }
+
   // Validate note is provided
   if (note === undefined || note === null) {
     return res.status(400).json({
@@ -1004,12 +1000,10 @@ exports.updateUserNote = async (req, res) => {
   }
 
   try {
-    // Check if user exists
-    const existingUser = await findUserById(id);
-    if (!existingUser) {
-      return res.status(404).json({
-        message: "User not found"
-      });
+    // Check if attendee exists
+    const attandee = await checkEventAttendeeExists(id)
+    if(!attandee){
+      return res.status(404).json({message:"Attendee not found"})
     }
 
     // Validate note length
@@ -1019,15 +1013,11 @@ exports.updateUserNote = async (req, res) => {
       });
     }
 
-    // Update only the note field
-    const updatedUser = await updateUser(id, { note });
+    const updateeEventAttendee = await updateEventAttendee(id,{note: note})
 
     res.status(200).json({
       message: "User note updated successfully",
-      user: {
-        ...updatedUser,
-        password: undefined // Don't send password in response
-      }
+      note: updateeEventAttendee.note
     });
   } catch (error) {
     res.status(500).json({

@@ -172,6 +172,13 @@ const updateEventAttendeeAndUser =async (userId,attendeeId,userData,attendeeData
     attendee
   }
 }
+
+const updateEventAttendee = async (id, data)=> prisma.eventAttendee.update({
+    where: {
+      id: Number(id)
+    },
+    data
+  })
 module.exports = {
   createEventAttendee,
   findEventAttendee,
@@ -183,5 +190,6 @@ module.exports = {
   findEventAttandeeForComment,
   findAttendeesByParticipationType,
   checkEventAttendeeExists,
-  updateEventAttendeeAndUser
+  updateEventAttendeeAndUser,
+  updateEventAttendee
 }; 

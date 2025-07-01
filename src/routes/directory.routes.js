@@ -99,7 +99,7 @@ router.get('/exhibitor-types/event/:eventId', authenticateJWT, getExhibitorTypes
 // People routes
 router.post('/people', authenticateJWT, uploadFields.profilePicture, handleMulterError, createDirectoryUser);
 router.put('/people/:id', authenticateJWT, upload.single('profilePicture'), handleMulterError, updateDirectoryUser);
-router.delete('/people/:id', authenticateJWT, deleteDirectoryUser);
+router.delete('/people', authenticateJWT, deleteDirectoryUser);
 router.patch('/people/note/:id', authenticateJWT, updateUserNote);
 router.post('/people/send-password/:id', authenticateJWT, sendUserPassword);
 router.get('/people/email/:email', getUserByEmail);
