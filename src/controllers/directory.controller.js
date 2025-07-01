@@ -86,7 +86,7 @@ const {
   findInterestAreasByEventId,
   deleteInterestArea
 } = require('../models/interest.area.model');
-const { createEventAttendee, findEventAttendee, findAttendeesByParticipationType, checkEventAttendeeExists, updateEventAttendeeAndUser, deleteEventAttendee, updateEventAttendee } = require('../models/eventAttendee.model');
+const { createEventAttendee, findEventAttendee, findAttendeesByParticipationType, checkEventAttendeeExists, updateEventAttendeeAndUser, deleteEventAttendee, updateEventAttendee, getEventAttendeeById } = require('../models/eventAttendee.model');
 const prisma = require('../config/prisma');
 
 const isIdValid = (id) => {
@@ -1036,14 +1036,34 @@ exports.findAllUser=async(req,res)=>{
         message: "Something went wrong",
         error: error.message
         });
+  }
 }
+
+exports.getPeopleById=async(req,res)=>{
+  try {
+    const {id} = req.params;
+    
+    if(!isIdValid(id)){
+      return res.status(400).json({message:"Inavlid id."})
+    }
+    const pepole = await getEventAttendeeById(id);
+
+    if(!pepole){
+      return res.status(404).json({message:"Attendee not found."})
+    }
+
+    res.status(200).json({
+      message: "Something went wrong",
+      attendee: pepole
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+      });
+  }
 }
-
-
-
-
-
-
 
 // Function to generate random 8-character alphanumeric password
 const generatePassword = () => {

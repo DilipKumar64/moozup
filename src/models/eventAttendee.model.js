@@ -179,6 +179,43 @@ const updateEventAttendee = async (id, data)=> prisma.eventAttendee.update({
     },
     data
   })
+
+const getEventAttendeeById = async (id)=>{
+  return prisma.eventAttendee.findUnique({
+    where: {
+      id: Number(id)
+    },
+    select: {
+      id: true,
+      description: true,
+      user: {
+        select: {
+          firstName : true,
+          lastName: true,
+          profilePicture: true,
+          jobTitle: true,
+          companyName: true,
+          linkedinUrl: true,
+          facebookUrl: true,
+          twitterUrl: true,
+          email: true,
+
+        }
+      },
+      sessions:{
+        select: {
+          id: true,
+          title :true,
+          startTime: true,
+          endTime: true,
+          description: true,
+          hall : true,
+          isLive: true
+        }
+      }
+    }
+  });
+}
 module.exports = {
   createEventAttendee,
   findEventAttendee,
@@ -191,5 +228,6 @@ module.exports = {
   findAttendeesByParticipationType,
   checkEventAttendeeExists,
   updateEventAttendeeAndUser,
-  updateEventAttendee
+  updateEventAttendee,
+  getEventAttendeeById
 }; 

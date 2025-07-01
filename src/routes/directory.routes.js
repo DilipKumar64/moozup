@@ -62,7 +62,8 @@ const {
   getSponsorTypes,
   findAllUser,
   getContacts,
-  getSponsorByid
+  getSponsorByid,
+  getPeopleById
 } = require('../controllers/directory.controller');
 const uploadFields = require("../middlewares/upload.middleware2");
 
@@ -109,6 +110,7 @@ router.post('/people/bulk-delete', authenticateJWT, bulkDeleteUsers);
 router.post('/people/bulk-display-order', authenticateJWT, bulkUpdateDisplayOrder);
 router.patch('/people/display-order/:id', authenticateJWT, updateUserDisplayOrder);
 router.get('/allPeople', authenticateJWT, findAllUser);
+router.get('/people/:id', authenticateJWT,getPeopleById)
 
 // Sponsor routes
 router.get('/sponsors', authenticateJWT, getAllSponsors);
