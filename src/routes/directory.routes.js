@@ -61,7 +61,8 @@ const {
   getAllParticipationTypes,
   getSponsorTypes,
   findAllUser,
-  getContacts
+  getContacts,
+  getSponsorByid
 } = require('../controllers/directory.controller');
 const uploadFields = require("../middlewares/upload.middleware2");
 
@@ -114,6 +115,7 @@ router.get('/sponsors', authenticateJWT, getAllSponsors);
 router.post('/sponsors', authenticateJWT, upload.single('logo'), handleMulterError, createSponsor);
 router.put('/sponsors/:id', authenticateJWT, upload.single('logo'), handleMulterError, updateSponsor);
 router.delete('/sponsors/:id', authenticateJWT, deleteSponsor);
+router.get('/sponsor/:id', authenticateJWT, getSponsorByid);
 router.post('/sponsors/:id/persons', authenticateJWT, addSponsorPersons);
 router.post('/sponsors/:id/documents', authenticateJWT, documentUpload.single('document'), handleMulterError, uploadSponsorDocument);
 router.post('/sponsors/bulk-display-order', authenticateJWT, bulkUpdateSponsorDisplayOrder);

@@ -44,7 +44,7 @@ const addSponsorPersons = async (sponsorId, userIds) => {
           select: { id: true }
         }
       }
-    });
+    }); 
 
     // Disconnect all existing persons
     const updatedSponsor = await prisma.sponsor.update({
@@ -68,9 +68,13 @@ const addSponsorPersons = async (sponsorId, userIds) => {
         sponsorPersons: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
-            profilePicture: true
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                profilePicture: true
+              }
+            }
           }
         }
       }
@@ -240,7 +244,52 @@ const getSponsorsForDirectory = async (eventId, page = 1, limit = 10) => {
     hasPreviousPage: page > 1,
   };
 };
-
+const getSponsorDetailById =(id)=>{
+  return prisma.sponsor.findUnique({
+    where: {
+      id: parseInt(id)
+    },
+    select:{
+      id: true,
+      name: true,
+      aboutCompany: true,
+      linkedinPageUrl: true,
+      facebookPageUrl: true,
+      twitterPageUrl: true,
+      logo: true,
+      website:true,
+      sponsorType: {
+        select: {
+          id: true,
+          type:true
+        }
+      },
+      Session: {
+        select:{
+          id: true,
+          title :true,
+          startTime: true,
+          endTime: true,
+          description: true,
+          hall : true,
+          isLive: true
+        }
+      },
+      sponsorPersons: {
+        select: {
+          id: true,
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              profilePicture : true
+            }
+          }
+        }
+      }
+    }
+  })
+}
 module.exports = {
   createSponsor,
   findSponsorById,
@@ -254,4 +303,5 @@ module.exports = {
   getAllSponsors,
   getSponsorsByEvent,
   getSponsorsForDirectory,
+  getSponsorDetailById
 }; 

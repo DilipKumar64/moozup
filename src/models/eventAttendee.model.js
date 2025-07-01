@@ -138,7 +138,12 @@ const findAttendeesByParticipationType = async (
     hasPreviousPage: page > 1,
   };
 };
-
+const checkEventAttendeeExists =(id)=>{
+  return prisma.eventAttendee.findUnique({
+    where: {id:id},
+    include:false
+  })
+}
 module.exports = {
   createEventAttendee,
   findEventAttendee,
@@ -149,4 +154,5 @@ module.exports = {
   findEventAttandeeByParticipationTypeId,
   findEventAttandeeForComment,
   findAttendeesByParticipationType,
+  checkEventAttendeeExists
 }; 

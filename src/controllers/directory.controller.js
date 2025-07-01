@@ -55,7 +55,7 @@ const {
 const FileService = require('../services/file.service');
 const { sendWelcomeEmail, sendPasswordEmail } = require('../utils/mailer');
 const bcrypt = require('bcrypt');
-const { createSponsor, findSponsorById, updateSponsor, addSponsorPersons, addSponsorDocument, deleteSponsor, bulkUpdateSponsorDisplayOrder, updateSponsorDisplayOrder, getAllSponsors, getSponsorsByEvent, getSponsorsForDirectory } = require('../models/sponsor.model');
+const { createSponsor, findSponsorById, updateSponsor, addSponsorPersons, addSponsorDocument, deleteSponsor, bulkUpdateSponsorDisplayOrder, updateSponsorDisplayOrder, getAllSponsors, getSponsorsByEvent, getSponsorsForDirectory, getSponsorDetailById } = require('../models/sponsor.model');
 
 const {
   createParticipationTypeSetting,
@@ -86,7 +86,7 @@ const {
   findInterestAreasByEventId,
   deleteInterestArea
 } = require('../models/interest.area.model');
-const { createEventAttendee, findEventAttendee, findAttendeesByParticipationType } = require('../models/eventAttendee.model');
+const { createEventAttendee, findEventAttendee, findAttendeesByParticipationType, checkEventAttendeeExists } = require('../models/eventAttendee.model');
 const prisma = require('../config/prisma');
 
 const isIdValid = (id) => {
@@ -1465,10 +1465,10 @@ exports.updateSponsor = async (req, res) => {
 
 exports.addSponsorPersons = async (req, res) => {
   const { id } = req.params;
-  const { userIds } = req.body;
+  const { attendeeIds } = req.body;
 
   // Validate input
-  if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+  if (!attendeeIds || !Array.isArray(attendeeIds) || attendeeIds.length === 0) {
     return res.status(400).json({
       message: "Please provide an array of user IDs"
     });
@@ -1484,7 +1484,7 @@ exports.addSponsorPersons = async (req, res) => {
     }
 
     // Validate all user IDs are numbers
-    const invalidIds = userIds.filter(id => isNaN(parseInt(id)));
+    const invalidIds = attendeeIds.filter(id => isNaN(parseInt(id)));
     if (invalidIds.length > 0) {
       return res.status(400).json({
         message: "Invalid user IDs provided",
@@ -1493,15 +1493,15 @@ exports.addSponsorPersons = async (req, res) => {
     }
 
     // Validate all users exist
-    const userValidationPromises = userIds.map(async (userId) => {
-      const user = await findUserById(userId);
-      return { userId, exists: !!user };
+    const userValidationPromises = attendeeIds.map(async (attendeeId) => {
+      const user = await checkEventAttendeeExists(attendeeId);
+      return { attendeeId, exists: !!user };
     });
 
     const userValidations = await Promise.all(userValidationPromises);
     const nonExistentUsers = userValidations
       .filter(validation => !validation.exists)
-      .map(validation => validation.userId);
+      .map(validation => validation.attendeeId);
 
     if (nonExistentUsers.length > 0) {
       return res.status(404).json({
@@ -1511,14 +1511,13 @@ exports.addSponsorPersons = async (req, res) => {
     }
 
     // Replace all sponsor persons with new array
-    const updatedSponsor = await addSponsorPersons(id, userIds);
-
+    const updatedSponsor = await addSponsorPersons(id, attendeeIds);
     res.status(200).json({
       message: "Sponsor persons updated successfully",
-      sponsorPersons: updatedSponsor.sponsorPerson.map(person => ({
+      sponsorPersons: updatedSponsor.sponsorPersons.map(person => ({ 
         id: person.id,
-        name: `${person.firstName} ${person.lastName || ''}`.trim(),
-        profilePicture: person.profilePicture
+        name: `${person.user.firstName} ${person.user.lastName || ''}`.trim(),
+        profilePicture: person.user.profilePicture 
       }))
     });
   } catch (error) {
@@ -1617,6 +1616,31 @@ exports.deleteSponsor = async (req, res) => {
     });
   }
 };
+
+exports.getSponsorByid = async (req,res)=>{
+  try{
+    const sponsorId = req.params.id;
+    console.log(sponsorId);
+    if(!isIdValid(sponsorId)){
+      return res.status(400).json({message:"Invalid sponsor id."});
+    }
+
+    const sponsor  =await getSponsorDetailById(sponsorId);
+
+    if(!sponsor){
+      return res.status(400).json({message: "Sponsor not found"})
+    }
+
+    return res.json({
+      message: "Sponsor fethed.",
+      sponsor: sponsor
+    });
+
+  }catch (e){
+    console.log(e.message)
+    return res.status(500).json({message:"Something went wrong.",error: e.message})
+  }
+}
 
 exports.bulkUpdateSponsorDisplayOrder = async (req, res) => {
   try {
