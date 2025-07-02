@@ -74,11 +74,23 @@ const deleteSession = (id) => {
   });
 };
 
+// Add this method to get unique session dates for an event, sorted ascending
+const getUniqueSessionDates = async (eventId) => {
+  const dates = await prisma.session.findMany({
+    where: { eventId: Number(eventId) },
+    select: { date: true },
+    orderBy: { date: 'asc' },
+    distinct: ['date'],
+  });
+  // Map to just the date values
+  return dates.map(d => d.date);
+};
+
 module.exports = {
   createSession,
   getAllSessions,
   updateSession,
   getSessionById,
   deleteSession,
-  // Add other session-related functions here as needed
+  getUniqueSessionDates, 
 };

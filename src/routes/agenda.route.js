@@ -30,6 +30,7 @@ router.get('/getAllSessions/:eventId',authenticateJWT, sessionController.getAllS
 router.put('/updateSession/:id',authenticateJWT, sessionController.updateSession);
 router.get('/getSessionById/:id',authenticateJWT, sessionController.getSessionById);
 router.delete('/deleteSession/:id',authenticateJWT, sessionController.deleteSession);
+router.get('/session/dates/:eventId',authenticateJWT, sessionController.getSessionDates);// get dates on which session will be conducteed
 
 
 
