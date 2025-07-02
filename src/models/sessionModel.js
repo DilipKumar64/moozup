@@ -31,11 +31,15 @@ const getAllSessions = (eventId, limit = null) => {
           type: true,
         },
       },
-      // speaker: {
-      //   select: {
-      //     firstName: true,
-      //   },
-      // },
+      speaker: {
+        select: {
+          user:{
+            select: {
+              profilePicture: true
+            }
+          }
+        },
+      },
     },
   });
 };

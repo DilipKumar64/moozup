@@ -265,6 +265,42 @@ const getExhibitorsForDirectory = async (eventId, page = 1, limit = 10) => {
   };
 };
 
+const getExhibitorDetailById = async (id)=>{
+  return prisma.exhibitor.findUnique({
+    where: {
+      id: parseInt(id)
+    },
+    select:{
+      id: true,
+      name: true,
+      aboutCompany: true,
+      linkedinPageUrl: true,
+      facebookPageUrl: true,
+      twitterPageUrl: true,
+      logo: true,
+      website:true,
+      stall: true,
+      exhibitorType: {
+        select: {
+          id: true,
+          type:true
+        }
+      },
+      exhibitorPersons: {
+        select: {
+          id: true,
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              profilePicture : true
+            }
+          }
+        }
+      }
+    }
+  })
+}
 module.exports = {
   createExhibitor,
   findExhibitorById,
@@ -278,4 +314,5 @@ module.exports = {
   getAllExhibitors,
   getExhibitorsByEvent,
   getExhibitorsForDirectory,
+  getExhibitorDetailById,
 }; 

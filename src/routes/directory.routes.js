@@ -40,7 +40,7 @@ const {
   updateExhibitor,
   addExhibitorPersons,
   uploadExhibitorDocument,
-  getExhibitorById,
+  getExhibitorsById,
   getEventExhibitors,
   deleteExhibitor,
   createParticipationTypeSetting,
@@ -63,7 +63,8 @@ const {
   findAllUser,
   getContacts,
   getSponsorByid,
-  getPeopleById
+  getPeopleById,
+  getExhibitorById
 } = require('../controllers/directory.controller');
 const uploadFields = require("../middlewares/upload.middleware2");
 
@@ -131,6 +132,7 @@ router.post('/exhibitors/:id/documents', authenticateJWT, documentUpload.single(
 router.get('/exhibitors/:id', authenticateJWT, getExhibitorById); //exhibitor by id
 router.get('/exhibitors', authenticateJWT, getEventExhibitors); //all exhibitors
 router.delete('/exhibitors/:id', authenticateJWT, deleteExhibitor); //delete exhibitor
+router.get('/exhibitor/:id', authenticateJWT, getExhibitorById); //exhibitor details
 
 // Interest Category routes
 router.post('/interest-categories', authenticateJWT, createInterestCategory);

@@ -49,7 +49,8 @@ const {
   getAllExhibitors,
   deleteExhibitor,
   getExhibitorsByEvent,
-  getExhibitorsForDirectory
+  getExhibitorsForDirectory,
+  getExhibitorDetailById
 } = require('../models/exhibitor.model');
 
 const FileService = require('../services/file.service');
@@ -1652,7 +1653,7 @@ exports.deleteSponsor = async (req, res) => {
 exports.getSponsorByid = async (req,res)=>{
   try{
     const sponsorId = req.params.id;
-    console.log(sponsorId);
+
     if(!isIdValid(sponsorId)){
       return res.status(400).json({message:"Invalid sponsor id."});
     }
@@ -2108,7 +2109,7 @@ exports.uploadExhibitorDocument = async (req, res) => {
   }
 };
 
-exports.getExhibitorById = async (req, res) => {
+exports.getExhibitorsById = async (req, res) => {
   const { id } = req.params;
 
   // Validate ID
@@ -2229,6 +2230,30 @@ exports.deleteExhibitor = async (req, res) => {
     });
   }
 };
+
+exports.getExhibitorById = async (req,res)=>{
+  try{
+    const exhibitorId = req.params.id;
+    console.log(exhibitorId);
+    if(!isIdValid(exhibitorId)){
+      return res.status(400).json({message:"Invalid sponsor id."});
+    }
+
+    const sponsor  =await getExhibitorDetailById(exhibitorId);
+
+    if(!sponsor){
+      return res.status(400).json({message: "Sponsor not found"})
+    }
+
+    return res.json({
+      message: "Sponsor fethed.",
+      sponsor: sponsor
+    });
+
+  }catch (e){
+    return res.status(500).json({message:"Something went wrong.",error: e.message})
+  } 
+}
 
 exports.updateParticipationTypeAttribute = async (req, res) => {
   try {
