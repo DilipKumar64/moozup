@@ -17,7 +17,7 @@ router.put("/profile/:id", authLimiter, authenticateJWT,fileUpload.image, userCo
 router.delete("/delete/:id", authLimiter, authenticateJWT, userController.deleteAccount);
 
 //Get user’s joined/created events
-router.get("/events", authLimiter, authenticateJWT, getUserEvents);
+router.get("/events", authenticateJWT, getUserEvents);
 
 //Get user’s joined/created communities
 // router.get("/communities", authLimiter, authenticateJWT, userController.getCommunities);

@@ -86,6 +86,39 @@ const getUniqueSessionDates = async (eventId) => {
   return dates.map(d => d.date);
 };
 
+// Get sessions by eventId, optional date, with pagination
+const getSessionsByEventAndDate = async (eventId, { date = null, page = 1, limit = 10 } = {}) => {
+  const where = {
+    eventId: Number(eventId),
+    ...(date && { date: new Date(date) })
+  };
+
+  const [total, sessions] = await Promise.all([
+    prisma.session.count({ where }),
+    prisma.session.findMany({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+      orderBy: { date: 'asc' },
+      include: {
+        sessionType: { select: { sessionname: true } },
+        participationType: { select: { personParticipationType: true } },
+        sponsorType: { select: { type: true } },
+        speaker: { select: { user: { select: { profilePicture: true } } } },
+      },
+    })
+  ]);
+
+  return {
+    sessions,
+    total,
+    currentPage: page,
+    totalPages: Math.ceil(total / limit),
+    hasNextPage: page * limit < total,
+    hasPreviousPage: page > 1
+  };
+};
+
 module.exports = {
   createSession,
   getAllSessions,
@@ -93,4 +126,5 @@ module.exports = {
   getSessionById,
   deleteSession,
   getUniqueSessionDates, 
+  getSessionsByEventAndDate, // Export the new method
 };
