@@ -31,25 +31,51 @@ const getAllSessions = (eventId, limit = null) => {
           type: true,
         },
       },
-      speaker: {
+      speakers: {
         select: {
-          user:{
+          id: true,
+          user: {
             select: {
+              id : true,
+              firstName: true,
+              lastName: true,
               profilePicture: true
             }
           }
-        },
+        }
       },
     },
   });
 };
 
 //update session
+// const updateSession = (id, data) => {
+//   return prisma.session.update({
+//     where: { id: parseInt(id) },
+//     data,
+//   });
+// };
 
-const updateSession = (id, data) => {
-  return prisma.session.update({
-    where: { id: parseInt(id) },
-    data,
+
+const updateSession = async (id, data, disconnectSpeakerIds = []) => {
+  return await prisma.$transaction(async (prisma) => {
+    // 1. Disconnect speakers if the list is not empty
+    if (disconnectSpeakerIds.length > 0) {
+      await prisma.session.update({
+        where: { id: parseInt(id) },
+        data: {
+          speakers: {
+            disconnect: disconnectSpeakerIds.map(speakerId => ({ id: Number(speakerId) }))
+          }
+        }
+      });
+    }
+
+    // 2. Update the session with the incoming data
+    return await prisma.session.update({
+      where: { id: parseInt(id) },
+      data,
+    });
   });
 };
 
@@ -62,7 +88,21 @@ const getSessionById = (id) => {
       sessionType: true,
       participationType: true,
       sponsorType: true,
-      speaker: true,
+      speakers: {
+        select: {
+          id: true,
+          user: {
+            select: {
+              id : true,
+              firstName: true,
+              lastName: true,
+              profilePicture: true,
+              companyName: true,
+              jobTitle: true
+            }
+          }
+        }
+      },
     },
   });
 };
@@ -104,7 +144,19 @@ const getSessionsByEventAndDate = async (eventId, { date = null, page = 1, limit
         sessionType: { select: { sessionname: true } },
         participationType: { select: { personParticipationType: true } },
         sponsorType: { select: { type: true } },
-        speaker: { select: { user: { select: { profilePicture: true } } } },
+        speakers: {
+          select: {
+            id: true,
+            user: {
+              select: {
+                id : true,
+                firstName: true,
+                lastName: true,
+                profilePicture: true
+              }
+            }
+          }
+        },
       },
     })
   ]);

@@ -329,8 +329,8 @@ model Session {
   sponsorName Int
   sponsor     Sponsor @relation(fields: [sponsorName], references: [id])
 
-  speakerId Int
-  speaker   EventAttendee @relation(fields: [speakerId], references: [id])
+  // speakerId Int
+  speakers  EventAttendee []
 
   participationTypeId Int
   participationType   ParticipationType @relation(fields: [participationTypeId], references: [id])

@@ -30,7 +30,8 @@ const {
 // create session
 const { validationResult } = require("express-validator"); // if you're using validation
 const { findUsersByParticipationTypeId } = require("../models/user.models");
-const { findEventAttandeeByParticipationTypeId, checkEventAttendeeExists } = require("../models/eventAttendee.model");
+const { findEventAttandeeByParticipationTypeId, checkEventAttendeeExists, findMissingEventAttendeeIds } = require("../models/eventAttendee.model");
+const { connect } = require("../..");
 
 const isIdValid = (id) => {
   return !isNaN(parseInt(id)) && parseInt(id) > 0;
@@ -139,7 +140,7 @@ exports.createSession = async (req, res) => {
       eventId,
       sponsorTypeId,
       sponsorName, // sponsorId
-      speakerId,
+      speakers,
       participationTypeId,
       isSpeakathon = false,
       enableFeedback = false,
@@ -160,14 +161,13 @@ exports.createSession = async (req, res) => {
         message: `Invalid sponsorName: No sponsor with ID ${sponsorName} found under sponsorTypeId ${sponsorTypeId}`,
       });
     }
-
     // 🔍 Step 2: Validate speakerId with participationTypeId
-    const speaker =await findEventAttandeeByParticipationTypeId( Number(speakerId), Number(participationTypeId))
-    
+    const missingIds = await findMissingEventAttendeeIds(speakers);
 
-    if (!speaker) {
-      return res.status(400).json({
-        message: `Invalid speakerId: No speaker with ID ${speakerId} found under participationTypeId ${participationTypeId}`,
+    if (missingIds.length > 0) {
+      return res.status(404).json({
+        message: "Some EventAttendee IDs not found",
+        missingIds
       });
     }
 
@@ -191,7 +191,9 @@ exports.createSession = async (req, res) => {
         eventId: Number(eventId),  
         sponsorTypeId: Number(sponsorTypeId),  
         sponsorName: Number(sponsorName),
-        speakerId: Number(speakerId),  
+        speakers: {
+          connect: speakers.map(id => ({ id: Number(id) }))
+        },
         participationTypeId: Number(participationTypeId),  
       },
     });
@@ -290,15 +292,32 @@ exports.updateSession = async (req, res) => {
       participationTypeId,
       sponsorTypeId,
       sponsorName,
-      speakerId,
+      newSpeakers=[],
+      speakersToRemove=[],
     } = req.body;
 
-    const updatedSession = await updateSession(id, {
+    const missingIds = await findMissingEventAttendeeIds(newSpeakers);
+    console.log(1)
+    if (missingIds.length > 0) {
+      return res.status(404).json({
+        message: "Some EventAttendee IDs not found for adding spekers.",
+        missingIds
+      });
+    }
+    const missingIdsOldSpakers = await findMissingEventAttendeeIds(speakersToRemove);
+
+    if (missingIdsOldSpakers.length > 0) {
+      return res.status(404).json({
+        message: "Some EventAttendee IDs not found for removing speakers.",
+        missingIds
+      });
+    }
+    const dataToUpdate = {
       title,
       description,
       date: new Date(date),
-      startTime: new Date(startTime),
-      endTime: new Date(endTime),
+      startTime: startTime,
+      endTime: endTime,
       venue,
       hall,
       track,
@@ -312,8 +331,12 @@ exports.updateSession = async (req, res) => {
         : null,
       sponsorTypeId: sponsorTypeId ? parseInt(sponsorTypeId) : null,
       sponsorName,
-      speakerId: speakerId ? parseInt(speakerId) : null,
-    });
+      speakers: {
+        connect: newSpeakers.map((item)=>({id: Number(item)}))
+      },
+    };
+    
+    const updatedSession = await updateSession(id,dataToUpdate,speakersToRemove);
 
     if (!updatedSession) {
       return res.status(404).json({

@@ -216,6 +216,26 @@ const getEventAttendeeById = async (id)=>{
     }
   });
 }
+
+// Check which EventAttendee IDs do not exist in the database
+const findMissingEventAttendeeIds = async (ids) => {
+  // Fetch all existing EventAttendee records with the given IDs
+  const existing = await prisma.eventAttendee.findMany({
+    where: {
+      id: { in: ids }
+    },
+    select: { id: true }
+  });
+
+  // Extract the found IDs
+  const foundIds = new Set(existing.map(e => e.id));
+
+  // Find which IDs were not found
+  const missingIds = ids.filter(id => !foundIds.has(id));
+
+  return missingIds;
+};
+
 module.exports = {
   createEventAttendee,
   findEventAttendee,
@@ -229,5 +249,6 @@ module.exports = {
   checkEventAttendeeExists,
   updateEventAttendeeAndUser,
   updateEventAttendee,
-  getEventAttendeeById
+  getEventAttendeeById,
+  findMissingEventAttendeeIds
 }; 
