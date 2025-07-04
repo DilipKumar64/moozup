@@ -34,11 +34,18 @@ const findPollById = async (id) => {
         options: true,
         responses: {
           include: {
-            user: {
+            attendee: { 
               select: {
                 id: true,
-                firstName: true,
-                lastName: true
+                eventId: true,
+                user:  {
+                  select :{
+                    id: true,
+                    firstName: true,
+                    lastName:true,
+                    profilePicture: true
+                  }
+                }
               }
             },
             option: true
@@ -176,11 +183,18 @@ const updatePoll = async (id, data) => {
           options: true,
           responses: {
             include: {
-              user: {
+              attendee: { 
                 select: {
                   id: true,
-                  firstName: true,
-                  lastName: true
+                  eventId: true,
+                  user:  {
+                    select :{
+                      id: true,
+                      firstName: true,
+                      lastName:true,
+                      profilePicture: true
+                    }
+                  }
                 }
               },
               option: true
@@ -268,13 +282,13 @@ const deletePoll = async (id) => {
 };
 
 // Add poll response
-const addPollResponse = async (pollId, userId, optionId) => {
+const addPollResponse = async (pollId, attendeeId, optionId) => {
   try {
     // First check if user has already responded to this option
     const existingResponse = await prisma.pollResponse.findFirst({
       where: {
         pollId: parseInt(pollId),
-        userId: parseInt(userId),
+        attendeeId: parseInt(attendeeId),
         optionId: parseInt(optionId)
       }
     });
@@ -287,15 +301,22 @@ const addPollResponse = async (pollId, userId, optionId) => {
     return await prisma.pollResponse.create({
       data: {
         pollId: parseInt(pollId),
-        userId: parseInt(userId),
+        attendeeId: parseInt(attendeeId),
         optionId: parseInt(optionId)
       },
       include: {
-        user: {
+        attendee: { 
+          id: true,
+          eventId: true,
           select: {
-            id: true,
-            firstName: true,
-            lastName: true
+            user:  {
+              select :{
+                id: true,
+                firstName: true,
+                lastName:true,
+                profilePicture: true
+              }
+            }
           }
         },
         option: true
@@ -313,6 +334,7 @@ const getPollResults = async (pollId) => {
     const poll = await prisma.poll.findUnique({
       where: { id: parseInt(pollId) },
       include: {
+        id : true,
         options: {
           include: {
             responses: {

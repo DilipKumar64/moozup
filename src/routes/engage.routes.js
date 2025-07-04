@@ -10,7 +10,7 @@ router.patch('/:sessionId/live', authenticateJWT, sessionController.toggleSessio
 router.get('/sessions/date', authenticateJWT, sessionController.getSessionsByDate);
 
 // Question routes
-router.post('/session/:sessionId/questions', authenticateJWT, sessionController.createQuestion);
+router.post('/session/:sessionId/questions/:attendeeId', authenticateJWT, sessionController.createQuestion);
 router.patch('/question/:questionId', authenticateJWT, sessionController.updateQuestion);
 router.get('/:sessionId/questions', authenticateJWT, sessionController.getSessionQuestions);
 
@@ -18,6 +18,6 @@ router.get('/:sessionId/questions', authenticateJWT, sessionController.getSessio
 router.post('/session/:sessionId/poll', authenticateJWT, sessionController.createPoll);
 router.put('/poll/:pollId', authenticateJWT, sessionController.updatePoll);
 router.get('/polls', authenticateJWT, sessionController.getSessionPolls);
-router.post('/poll/:pollId/response', authenticateJWT, sessionController.submitPollResponse);
+router.post('/poll/:pollId/response/:attendeeId', authenticateJWT, sessionController.submitPollResponse);
 
 module.exports = router; 
