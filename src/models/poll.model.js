@@ -61,71 +61,78 @@ const findPollById = async (id) => {
 };
 
 // Find polls by event ID
-const findPollsByEventId = async (eventId) => {
-  try {
-    // First get all sessions for this event
-    const sessions = await prisma.session.findMany({
-      where: { eventId: parseInt(eventId) },
-      select: { id: true }
-    });
+// const findPollsByEventId = async (eventId) => {
+//   try {
+//     // First get all sessions for this event
+//     const sessions = await prisma.session.findMany({
+//       where: { eventId: parseInt(eventId) },
+//       select: { id: true }
+//     });
 
-    if (sessions.length === 0) {
-      return [];
-    }
+//     if (sessions.length === 0) {
+//       return [];
+//     }
 
-    const sessionIds = sessions.map(session => session.id);
+//     const sessionIds = sessions.map(session => session.id);
 
-    // Get all polls for these sessions
-    const polls = await prisma.poll.findMany({
-      where: {
-        sessionId: {
-          in: sessionIds
-        }
-      },
-      include: {
-        options: {
-          include: {
-            responses: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    firstName: true,
-                    lastName: true,
-                    email: true
-                  }
-                }
-              }
-            }
-          }
-        },
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+//     // Get all polls for these sessions
+//     const polls = await prisma.poll.findMany({
+//       where: {
+//         sessionId: {
+//           in: sessionIds
+//         }
+//       },
+//       include: {
+//         options: {
+//           include: {
+//             responses: {
+//               select: {
+//                 attendee :{
+//                   select: {
+//                     id: true,
+//                     user: {
+//                       select: {
+//                         id: true,
+//                         firstName: true,
+//                         lastName: true,
+//                         email: true,
+//                         profilePicture:true
+//                       }
+//                     }
+//                   }
+//                 }
+                
+//               }
+//             }
+//           }
+//         },
+//       },
+//       orderBy: {
+//         createdAt: 'desc'
+//       }
+//     });
 
-    // Add response counts to each option
-    return polls.map(poll => ({
-      ...poll,
-      options: poll.options.map(option => ({
-        ...option,
-        responseCount: option.responses.length,
-        responses: option.responses.map(response => ({
-          userId: response.user.id,
-          firstName: response.user.firstName,
-          lastName: response.user.lastName,
-          email: response.user.email,
-          respondedAt: response.createdAt
-        }))
-      })),
-      totalResponses: poll.options.reduce((sum, option) => sum + option.responses.length, 0)
-    }));
-  } catch (error) {
-    console.error('Error finding polls by event:', error);
-    throw error;
-  }
-};
+//     // Add response counts to each option
+//     return polls.map(poll => ({
+//       ...poll,
+//       options: poll.options.map(option => ({
+//         ...option,
+//         responseCount: option.responses.length,
+//         responses: option.responses.map(response => ({
+//           userId: response.user.id,
+//           firstName: response.user.firstName,
+//           lastName: response.user.lastName,
+//           email: response.user.email,
+//           respondedAt: response.createdAt
+//         }))
+//       })),
+//       totalResponses: poll.options.reduce((sum, option) => sum + option.responses.length, 0)
+//     }));
+//   } catch (error) {
+//     console.error('Error finding polls by event:', error);
+//     throw error;
+//   }
+// };
 
 // Find polls by session ID
 const findPollsBySessionId = async (sessionId) => {
@@ -134,21 +141,31 @@ const findPollsBySessionId = async (sessionId) => {
       where: { sessionId: parseInt(sessionId) },
       include: {
         options: {
-          include: {
+          select: {
+            id: true,
+            text: true,
             responses: {
-              include: {
-                user: {
+              select: {
+                attendee :{
                   select: {
                     id: true,
-                    firstName: true,
-                    lastName: true
+                    user: {
+                      select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        profilePicture:true
+                      }
+                    }
                   }
                 }
+                
               }
             }
           }
         },
-        session: true
+        session: false
       },
       orderBy: {
         createdAt: 'desc'
@@ -294,7 +311,8 @@ const addPollResponse = async (pollId, attendeeId, optionId) => {
     });
 
     if (existingResponse) {
-      throw new Error('User has already responded to this option');
+      await prisma.pollResponse.delete({where: {id:existingResponse.id}})
+      // throw new Error('User has already responded to this option');
     }
 
     // Create new response
@@ -305,17 +323,17 @@ const addPollResponse = async (pollId, attendeeId, optionId) => {
         optionId: parseInt(optionId)
       },
       include: {
-        attendee: { 
-          id: true,
-          eventId: true,
-          select: {
-            user:  {
-              select :{
-                id: true,
-                firstName: true,
-                lastName:true,
-                profilePicture: true
-              }
+        attendee: {
+          select:{
+            id: true,
+            eventId: true,
+              user:  {
+                select :{
+                  id: true,
+                  firstName: true,
+                  lastName:true,
+                  profilePicture: true
+                }
             }
           }
         },
@@ -333,17 +351,23 @@ const getPollResults = async (pollId) => {
   try {
     const poll = await prisma.poll.findUnique({
       where: { id: parseInt(pollId) },
-      include: {
+      select: {
         id : true,
         options: {
           include: {
             responses: {
-              include: {
-                user: {
-                  select: {
+              select: {
+                id: true,
+                attendee: {
+                  select :{
                     id: true,
-                    firstName: true,
-                    lastName: true
+                    user: {
+                      select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true
+                      }
+                    }
                   }
                 }
               }
@@ -363,10 +387,10 @@ const getPollResults = async (pollId) => {
       text: option.text,
       count: option.responses.length,
       responses: option.responses.map(response => ({
-        userId: response.user.id,
-        firstName: response.user.firstName,
-        lastName: response.user.lastName,
-        respondedAt: response.createdAt
+        attendeeid: response.attendee.user.id,
+        firstName: response.attendee.user.firstName,
+        lastName: response.attendee.user.lastName,
+        respondedAt: response.attendee.createdAt
       }))
     }));
 
@@ -429,7 +453,7 @@ module.exports = {
   createPoll,
   findPollById,
   findPollsBySessionId,
-  findPollsByEventId,
+  // findPollsByEventId,
   updatePoll,
   deletePoll,
   addPollResponse,

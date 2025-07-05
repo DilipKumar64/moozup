@@ -18,7 +18,7 @@ const {
   getPollResults, 
   endPoll, 
   getActivePolls,
-  findPollsByEventId
+  // findPollsByEventId
 } = require('../models/poll.model');
 const { checkEventAttendeeExists } = require('../models/eventAttendee.model');
 
@@ -220,7 +220,6 @@ exports.getSessionsByDate = async (req, res) => {
 exports.createPoll = async (req, res) => {
   const { sessionId } = req.params;
   const { question, passCode, pollsLimit, answerType, options, show } = req.body;
-  const userId = req.user.id;
 
   // Validate request body
   if (!question || !answerType || !options || !Array.isArray(options)) {
@@ -301,10 +300,10 @@ exports.getSessionPolls = async (req, res) => {
 
   try {
     let polls;
-    
+ 
     if (eventId) {
       // Get all polls for an event
-      polls = await findPollsByEventId(eventId);
+      // polls = await findPollsByEventId(eventId);
     } else {
       // Get polls for a specific session
       const session = await findSessionById(sessionId);
@@ -313,7 +312,6 @@ exports.getSessionPolls = async (req, res) => {
       }
       polls = await findPollsBySessionId(sessionId);
     }
-
     res.json({
       success: true,
       data: polls,
@@ -360,35 +358,26 @@ exports.submitPollResponse = async (req, res) => {
       )
     );
 
-    // Get updated poll results
-    const results = await getPollResults(pollId);
-
     // Emit poll response with results
     emitPollResponse(poll.sessionId, pollId, {
-      userId,
-      selectedOptions,
-      results,
-      responses: responses.map(response => ({
-        attendeeId: response.attendee.user.id,
-        firstName: response.attendee.user.firstName,
-        lastName: response.attendee.user.lastName,
-        optionId: response.optionId,
-        optionText: response.option.text,
-        respondedAt: response.createdAt
-      }))
+        pollId,
+        attendeeId,
+        selectedOptions,
+        responses: responses.map(response => ({
+          attendee: response.attendee,
+        }))
     });
 
     res.json({ 
       success: true, 
-      results,
-      responses: responses.map(response => ({
-        userId: response.user.id,
-        firstName: response.user.firstName,
-        lastName: response.user.lastName,
-        optionId: response.optionId,
-        optionText: response.option.text,
-        respondedAt: response.createdAt
-      }))
+      data: {
+        pollId,
+        attendeeId,
+        selectedOptions,
+        responses: responses.map(response => ({ 
+          attendee: response.attendee,
+        }))
+      }
     });
   } catch (error) {
     console.error('Error submitting poll response:', error);
