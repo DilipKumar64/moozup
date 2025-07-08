@@ -155,6 +155,10 @@ model EventAttendee {
   newsComments       NewsComment[]
   newsCommentLikes   NewsCommentLike[]
 
+  // Chat feature relations
+  chatParticipants   ChatParticipant[]
+  chatMessages       ChatMessage[] @relation("ChatMessages")
+
   @@unique([userId, eventId])
 }
 
@@ -702,4 +706,63 @@ model NewsCommentLike {
   createdAt  DateTime      @default(now())
 
   @@unique([commentId, attendeeId])
+}
+
+// Chat Models
+model Chat {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Participants in the chat
+  participants ChatParticipant[]
+  messages     ChatMessage[]
+
+  @@map("chats")
+}
+
+model ChatParticipant {
+  id         Int      @id @default(autoincrement())
+  chatId     Int
+  attendeeId Int
+  joinedAt   DateTime @default(now())
+  isActive   Boolean  @default(true)
+
+  chat     Chat         @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  attendee EventAttendee @relation(fields: [attendeeId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, attendeeId])
+  @@map("chat_participants")
+}
+
+model ChatMessage {
+  id         Int      @id @default(autoincrement())
+  chatId     Int
+  senderId   Int
+  content    String?  @db.Text
+  messageType String  @default("TEXT") // TEXT, IMAGE, IMAGE_WITH_TEXT
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  isRead     Boolean  @default(false)
+
+  chat   Chat         @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender EventAttendee @relation("ChatMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  
+  attachments ChatAttachment[]
+
+  @@map("chat_messages")
+}
+
+model ChatAttachment {
+  id        Int      @id @default(autoincrement())
+  messageId Int
+  fileUrl   String
+  fileName  String?
+  fileType  String   // image/jpeg, image/png, etc.
+  fileSize  Int?     // in bytes
+  createdAt DateTime @default(now())
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("chat_attachments")
 }

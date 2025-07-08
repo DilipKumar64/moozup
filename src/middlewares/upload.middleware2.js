@@ -10,6 +10,14 @@ const excelTypes = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "application/vnd.ms-excel",
 ];
+const imageTypes = [
+  "image/jpeg",
+  "image/jpg", 
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "application/octet-stream"
+];
 
 const storage = multer.memoryStorage(); // ✅ use memoryStorage for all
 
@@ -20,6 +28,10 @@ const fileFilter = (req, file, cb) => {
 
   if (file.fieldname === "excelSheet" && !excelTypes.includes(file.mimetype)) {
     return cb(new Error("Only Excel files are allowed for contact import"), false);
+  }
+
+  if (file.fieldname === "image" && !imageTypes.includes(file.mimetype)) {
+    return cb(new Error("Only image files (JPEG, PNG, GIF, WebP) are allowed for chat images"), false);
   }
 
   cb(null, true);
@@ -42,7 +54,8 @@ const uploadFields = {
   contactExcel: upload.fields([{ name: "excelSheet", maxCount: 1 }]),
   venueMap:upload.fields([{name:"venueMap", maxCount:1}]),
   newsPostImages: upload.fields([{ name: "images", maxCount: 10 }]),
-  image: upload.fields([{name:"image", maxCount:1}])
+  image: upload.fields([{name:"image", maxCount:1}]),
+  chatImage: upload.fields([{ name: "image", maxCount: 1 }])
 
 };
 
