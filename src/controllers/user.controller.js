@@ -39,7 +39,7 @@ exports.getProfileById = async (req, res) => {
 
   // Update user profile
 exports.updateProfile = async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.user;
     const { 
         firstName, 
         lastName, 
@@ -54,7 +54,12 @@ exports.updateProfile = async (req, res) => {
         phoneNumber,
         phoneExtension,
         language,
-        country
+        country,
+        companyName,
+        jobTitle,
+        facebookUrl,
+        linkedinUrl,
+        twitterUrl
     } = req.body;
 
     if (!isIdValid(id)) {
@@ -67,9 +72,9 @@ exports.updateProfile = async (req, res) => {
     }
 
     // If email is provided in the request, return error
-    if (email) {
-        return res.status(400).json({ message: "Email cannot be updated through this endpoint" });
-    }
+    // if (email) {
+    //     return res.status(400).json({ message: "Email cannot be updated through this endpoint" });
+    // }
 
     try {
         // Check if user exists
@@ -90,18 +95,24 @@ exports.updateProfile = async (req, res) => {
         const updatedUser = await updateUser(id, {
             firstName,
             lastName,
-            profilePicture,
+            profilePicture: profilePicture ? profilePicture: undefined,
             dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-            gender,
-            addressLine1,
-            addressLine2,
-            city,
-            state,
-            zipCode,
-            phoneNumber,
-            phoneExtension,
-            language,
-            country
+            gender : gender ? gender : undefined,
+            addressLine1 : addressLine1 ? addressLine1 :  undefined,
+            addressLine2 : addressLine2 ? addressLine2 : undefined,
+            city : city ? city : undefined,
+            state: state ? state : undefined,
+            zipCode : zipCode ? zipCode : undefined,
+            phoneNumber : phoneNumber ? phoneNumber : undefined,
+            phoneExtension : phoneExtension ? phoneExtension : undefined,
+            language : language ? language : undefined,
+            country : country ? country : undefined,
+            email : email ? email : undefined,
+            companyName : companyName ? companyName : undefined,
+            jobTitle : jobTitle ? jobTitle : undefined,
+            facebookUrl : facebookUrl ? facebookUrl : undefined,
+            linkedinUrl : linkedinUrl ? linkedinUrl : undefined,
+            twitterUrl : twitterUrl ? twitterUrl : undefined
         });
 
         // Remove sensitive information before sending response

@@ -11,7 +11,7 @@ const router = express.Router();
 router.get("/profile/:id",authLimiter, authenticateJWT, userController.getProfileById);
 
 // Update user profile
-router.put("/profile/:id", authLimiter, authenticateJWT,fileUpload.image, userController.updateProfile);
+router.put("/profile", authLimiter, authenticateJWT,fileUpload.image, userController.updateProfile);
 
 // Delete user account
 router.delete("/delete/:id", authLimiter, authenticateJWT, userController.deleteAccount);

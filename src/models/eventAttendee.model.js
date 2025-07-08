@@ -248,14 +248,7 @@ const findEventAttendeeDetail = (userId, eventId) => {
     select: {
       id: true,
       participationTypeId : true,
-      user:{
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          profilePicture: true
-        }
-      }
+      user: true
     }
   });
 };

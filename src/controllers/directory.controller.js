@@ -1080,7 +1080,13 @@ exports.getEventAttendeeDetail=async(req,res)=>{
 
     res.status(200).json({
       message: "EventAttendee fetched.",
-      attendee: eventAttendee
+      attendee: {
+        ...eventAttendee,
+        user: {
+          ...eventAttendee.user,
+          password: null
+        }
+      }
     });
 
   } catch (error) {
