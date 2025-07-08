@@ -236,6 +236,30 @@ const findMissingEventAttendeeIds = async (ids) => {
   return missingIds;
 };
 
+// Find an EventAttendee record by userId and eventId
+const findEventAttendeeDetail = (userId, eventId) => {
+  return prisma.eventAttendee.findUnique({
+    where: {
+      userId_eventId: {
+        userId: parseInt(userId),
+        eventId: parseInt(eventId),
+      },
+    },
+    select: {
+      id: true,
+      participationTypeId : true,
+      user:{
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          profilePicture: true
+        }
+      }
+    }
+  });
+};
+
 module.exports = {
   createEventAttendee,
   findEventAttendee,
@@ -250,5 +274,6 @@ module.exports = {
   updateEventAttendeeAndUser,
   updateEventAttendee,
   getEventAttendeeById,
-  findMissingEventAttendeeIds
+  findMissingEventAttendeeIds,
+  findEventAttendeeDetail
 }; 

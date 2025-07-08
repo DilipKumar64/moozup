@@ -87,7 +87,7 @@ const {
   findInterestAreasByEventId,
   deleteInterestArea
 } = require('../models/interest.area.model');
-const { createEventAttendee, findEventAttendee, findAttendeesByParticipationType, checkEventAttendeeExists, updateEventAttendeeAndUser, deleteEventAttendee, updateEventAttendee, getEventAttendeeById } = require('../models/eventAttendee.model');
+const { createEventAttendee, findEventAttendee, findAttendeesByParticipationType, checkEventAttendeeExists, updateEventAttendeeAndUser, deleteEventAttendee, updateEventAttendee, getEventAttendeeById, findEventAttendeeDetail } = require('../models/eventAttendee.model');
 const prisma = require('../config/prisma');
 
 const isIdValid = (id) => {
@@ -1054,7 +1054,7 @@ exports.getPeopleById=async(req,res)=>{
     }
 
     res.status(200).json({
-      message: "Something went wrong",
+      message: "Attendee fetched.",
       attendee: pepole
     });
 
@@ -1065,7 +1065,31 @@ exports.getPeopleById=async(req,res)=>{
       });
   }
 }
+exports.getEventAttendeeDetail=async(req,res)=>{
+  try {
+    const {eventId} = req.params;
+    
+    if(!isIdValid(eventId)){
+      return res.status(400).json({message:"Inavlid ids."})
+    }
+    const eventAttendee = await findEventAttendeeDetail(req.user.id, eventId);
 
+    if(!eventAttendee){
+      return res.status(404).json({message:"Attendee not found."})
+    }
+
+    res.status(200).json({
+      message: "EventAttendee fetched.",
+      attendee: eventAttendee
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+      });
+  }
+}
 // Function to generate random 8-character alphanumeric password
 const generatePassword = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

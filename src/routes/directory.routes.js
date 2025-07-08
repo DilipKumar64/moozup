@@ -64,7 +64,8 @@ const {
   getContacts,
   getSponsorByid,
   getPeopleById,
-  getExhibitorById
+  getExhibitorById,
+  getEventAttendeeDetail
 } = require('../controllers/directory.controller');
 const uploadFields = require("../middlewares/upload.middleware2");
 
@@ -112,6 +113,7 @@ router.post('/people/bulk-display-order', authenticateJWT, bulkUpdateDisplayOrde
 router.patch('/people/display-order/:id', authenticateJWT, updateUserDisplayOrder);
 router.get('/allPeople', authenticateJWT, findAllUser);
 router.get('/people/:id', authenticateJWT,getPeopleById)
+router.get('/event-attendee-detail/:eventId',authenticateJWT,getEventAttendeeDetail)
 
 // Sponsor routes
 router.get('/sponsors', authenticateJWT, getAllSponsors);
