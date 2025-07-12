@@ -155,6 +155,12 @@ model EventAttendee {
   newsComments       NewsComment[]
   newsCommentLikes   NewsCommentLike[]
 
+  // SocialPost feature relations
+  socialPosts        SocialPost[]
+  socialPostLikes    SocialPostLike[]
+  socialComments     SocialComment[]
+  socialCommentLikes SocialCommentLike[]
+
   // Chat feature relations
   chatParticipants   ChatParticipant[]
   chatMessages       ChatMessage[] @relation("ChatMessages")
@@ -701,6 +707,57 @@ model NewsCommentLike {
   id         Int           @id @default(autoincrement())
   commentId  Int
   comment    NewsComment   @relation(fields: [commentId], references: [id])
+  attendeeId Int
+  attendee   EventAttendee @relation(fields: [attendeeId], references: [id])
+  createdAt  DateTime      @default(now())
+
+  @@unique([commentId, attendeeId])
+}
+
+// SocialPost Models
+model SocialPost {
+  id          Int              @id @default(autoincrement())
+  description String?
+  images      String[]         // Array of image URLs (max 10, enforced in controller)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  attendeeId  Int
+  attendee    EventAttendee    @relation(fields: [attendeeId], references: [id])
+  likes       SocialPostLike[]
+  shares      Int              @default(0)
+  comments    SocialComment[]
+}
+
+model SocialPostLike {
+  id         Int           @id @default(autoincrement())
+  postId     Int
+  post       SocialPost    @relation(fields: [postId], references: [id])
+  attendeeId Int
+  attendee   EventAttendee @relation(fields: [attendeeId], references: [id])
+  createdAt  DateTime      @default(now())
+
+  @@unique([postId, attendeeId])
+}
+
+model SocialComment {
+  id            Int              @id @default(autoincrement())
+  postId        Int
+  post          SocialPost       @relation(fields: [postId], references: [id])
+  attendeeId    Int
+  attendee      EventAttendee    @relation(fields: [attendeeId], references: [id])
+  content       String
+  parentId      Int?             // null for top-level, set for replies
+  parent        SocialComment?   @relation("SocialCommentReplies", fields: [parentId], references: [id])
+  replies       SocialComment[]  @relation("SocialCommentReplies")
+  likes         SocialCommentLike[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model SocialCommentLike {
+  id         Int           @id @default(autoincrement())
+  commentId  Int
+  comment    SocialComment @relation(fields: [commentId], references: [id])
   attendeeId Int
   attendee   EventAttendee @relation(fields: [attendeeId], references: [id])
   createdAt  DateTime      @default(now())
