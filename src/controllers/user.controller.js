@@ -1,6 +1,10 @@
 const { findUserById, updateUser, deleteUser } = require('../models/user.models');
+const { findEventsByUserId } = require('../models/eventAttendee.model');
 const { createFollow, findFollow, countFollowers, countFollowing, deleteFollow, getFollowers, getFollowing } = require('../models/follow.model');
 const { createReport } = require('../models/report.model');
+const deleteFromSupabase = require('../utils/deleteFromSupabase');
+const getSupabasePath = require('../utils/getSupabasePath');
+const uploadToSupabase = require('../utils/uploadToSupabase');
 
 const isIdValid = (id) => {
     return !isNaN(parseInt(id)) && parseInt(id) > 0;
@@ -35,12 +39,11 @@ exports.getProfileById = async (req, res) => {
 
   // Update user profile
 exports.updateProfile = async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.user;
     const { 
         firstName, 
         lastName, 
         email, // We'll keep this in destructuring but won't use it
-        profilePicture,
         dateOfBirth,
         gender,
         addressLine1,
@@ -51,7 +54,12 @@ exports.updateProfile = async (req, res) => {
         phoneNumber,
         phoneExtension,
         language,
-        country
+        country,
+        companyName,
+        jobTitle,
+        facebookUrl,
+        linkedinUrl,
+        twitterUrl
     } = req.body;
 
     if (!isIdValid(id)) {
@@ -64,9 +72,9 @@ exports.updateProfile = async (req, res) => {
     }
 
     // If email is provided in the request, return error
-    if (email) {
-        return res.status(400).json({ message: "Email cannot be updated through this endpoint" });
-    }
+    // if (email) {
+    //     return res.status(400).json({ message: "Email cannot be updated through this endpoint" });
+    // }
 
     try {
         // Check if user exists
@@ -74,23 +82,37 @@ exports.updateProfile = async (req, res) => {
         if (!existingUser) {
             return res.status(404).json({ message: "User not found" });
         }
+        let profilePicture = null;
+        if(req.files?.image?.length>0){
+          if(existingUser.profilePicture){
+            const imagepath = getSupabasePath(existingUser.profilePicture,"moozup/profilePicturs");
+            if(imagepath) await deleteFromSupabase("moozup", `profilePictures/${imagepath}`);
+          }
 
+         profilePicture = await uploadToSupabase(req.files.image[0],"profilePicture");
+        }
         // Update user profile
         const updatedUser = await updateUser(id, {
             firstName,
             lastName,
-            profilePicture,
+            profilePicture: profilePicture ? profilePicture: undefined,
             dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-            gender,
-            addressLine1,
-            addressLine2,
-            city,
-            state,
-            zipCode,
-            phoneNumber,
-            phoneExtension,
-            language,
-            country
+            gender : gender ? gender : undefined,
+            addressLine1 : addressLine1 ? addressLine1 :  undefined,
+            addressLine2 : addressLine2 ? addressLine2 : undefined,
+            city : city ? city : undefined,
+            state: state ? state : undefined,
+            zipCode : zipCode ? zipCode : undefined,
+            phoneNumber : phoneNumber ? phoneNumber : undefined,
+            phoneExtension : phoneExtension ? phoneExtension : undefined,
+            language : language ? language : undefined,
+            country : country ? country : undefined,
+            email : email ? email : undefined,
+            companyName : companyName ? companyName : undefined,
+            jobTitle : jobTitle ? jobTitle : undefined,
+            facebookUrl : facebookUrl ? facebookUrl : undefined,
+            linkedinUrl : linkedinUrl ? linkedinUrl : undefined,
+            twitterUrl : twitterUrl ? twitterUrl : undefined
         });
 
         // Remove sensitive information before sending response
@@ -261,4 +283,32 @@ exports.reportUser = async (req, res) => {
     console.error("Report user error:", error);
     res.status(500).json({ message: "Something went wrong", error: error.message });
   }
+};
+
+exports.getUserEvents = async (req, res) => {
+    const user = req.user;
+    console.log(user);
+    const { id } =  req.user;
+
+    if (!isIdValid(id)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    try {
+        const user = await findUserById(id);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const userEvents = await findEventsByUserId(id);
+        const events = userEvents.map(ue => ue.event);
+
+        res.status(200).json({
+            message: "User events retrieved successfully",
+            events
+        });
+    } catch (error) {
+        console.error("Get user events error:", error);
+        res.status(500).json({ message: "Something went wrong", error: error.message });
+    }
 };

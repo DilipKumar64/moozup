@@ -80,9 +80,13 @@ const addExhibitorPersons = async (exhibitorId, userIds) => {
         exhibitorPersons: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
-            profilePicture: true
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                profilePicture: true
+              }
+            }
           }
         }
       }
@@ -204,6 +208,99 @@ const getAllExhibitors = async (page = 1, limit = 10, exhibitorTypeId = null, ev
   };
 };
 
+// Get exhibitors by event with limit
+const getExhibitorsByEvent = async (eventId, limit = null) => {
+  return prisma.exhibitor.findMany({
+    where: {
+      exhibitorType: {
+        eventId: parseInt(eventId)
+      }
+    },
+    ...(limit && { take: limit }),
+    select: {
+      id: true,
+      name: true,
+      website: true,
+      logo: true
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  });
+};
+
+const getExhibitorsForDirectory = async (eventId, page = 1, limit = 10) => {
+  const skip = (page - 1) * limit;
+  const where = {
+    exhibitorType: {
+      eventId: parseInt(eventId),
+    },
+  };
+
+  const [exhibitors, total] = await prisma.$transaction([
+    prisma.exhibitor.findMany({
+      where,
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        name: true,
+        website: true,
+        logo: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    }),
+    prisma.exhibitor.count({ where }),
+  ]);
+
+  return {
+    data: exhibitors,
+    total,
+    currentPage: page,
+    totalPages: Math.ceil(total / limit),
+    hasNextPage: skip + limit < total,
+    hasPreviousPage: page > 1,
+  };
+};
+
+const getExhibitorDetailById = async (id)=>{
+  return prisma.exhibitor.findUnique({
+    where: {
+      id: parseInt(id)
+    },
+    select:{
+      id: true,
+      name: true,
+      aboutCompany: true,
+      linkedinPageUrl: true,
+      facebookPageUrl: true,
+      twitterPageUrl: true,
+      logo: true,
+      website:true,
+      stall: true,
+      exhibitorType: {
+        select: {
+          id: true,
+          type:true
+        }
+      },
+      exhibitorPersons: {
+        select: {
+          id: true,
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              profilePicture : true
+            }
+          }
+        }
+      }
+    }
+  })
+}
 module.exports = {
   createExhibitor,
   findExhibitorById,
@@ -214,5 +311,8 @@ module.exports = {
   deleteExhibitor,
   bulkUpdateExhibitorDisplayOrder,
   updateExhibitorDisplayOrder,
-  getAllExhibitors
+  getAllExhibitors,
+  getExhibitorsByEvent,
+  getExhibitorsForDirectory,
+  getExhibitorDetailById,
 }; 

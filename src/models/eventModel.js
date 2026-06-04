@@ -229,6 +229,12 @@ const createStaticContent = async (field,value,eventId,userId) => {
   });
 };
 
+const checkEventExists = (id)=>{
+  return prisma.event.findUnique({
+    where: {id: Number(id)},
+    include: false
+  })
+}
 module.exports = {
   createEvent,
   findAllEvents,
@@ -242,4 +248,5 @@ module.exports = {
   rsvpToEvent,
   getAttendees,
   createStaticContent,
+  checkEventExists
 };

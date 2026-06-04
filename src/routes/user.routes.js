@@ -2,6 +2,8 @@ const express = require('express');
 const authenticateJWT = require('../middlewares/auth.middleware');
 const authLimiter = require('../middlewares/userLimiter');
 const userController = require('../controllers/user.controller'); // Importing authController
+const { getUserEvents } = require('../controllers/user.controller');
+const fileUpload = require("../middlewares/upload.middleware2")
 
 const router = express.Router();
 
@@ -9,13 +11,13 @@ const router = express.Router();
 router.get("/profile/:id",authLimiter, authenticateJWT, userController.getProfileById);
 
 // Update user profile
-router.put("/profile/:id", authLimiter, authenticateJWT, userController.updateProfile);
+router.put("/profile", authLimiter, authenticateJWT,fileUpload.image, userController.updateProfile);
 
 // Delete user account
 router.delete("/delete/:id", authLimiter, authenticateJWT, userController.deleteAccount);
 
 //Get user’s joined/created events
-// router.get("/events", authLimiter, authenticateJWT, userController.getEvents);
+router.get("/events", authenticateJWT, getUserEvents);
 
 //Get user’s joined/created communities
 // router.get("/communities", authLimiter, authenticateJWT, userController.getCommunities);

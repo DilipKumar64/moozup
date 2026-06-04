@@ -4,17 +4,17 @@ const authenticateJWT = require('../middlewares/auth.middleware');
 const sessionTypeController = require('../controllers/agenda.controller');
 const sessionController = require('../controllers/agenda.controller');
 
-const multer = require('multer');
+// const multer = require('multer');
 
 
 
 // Middleware to handle multipart/form-data
-router.use(multer().none()); // You can adjust the multer configuration as needed
+// router.use(multer().none()); // You can adjust the multer configuration as needed
 
 
 // session type routes
 router.post('/createSessionType',authenticateJWT, sessionTypeController.createSessionType);
-router.get('/getAllSessionTypes',authenticateJWT, sessionTypeController.GetAllSessionTypes);
+router.get('/getAllSessionTypes/:eventId',authenticateJWT, sessionTypeController.GetAllSessionTypes);
 router.get('/getSessionTypeById/:id',authenticateJWT, sessionTypeController.GetSessionTypeById);
 router.put('/updateSessionType/:id',authenticateJWT, sessionTypeController.UpdateSessionType);
 router.delete('/deleteSessionType/:id',authenticateJWT, sessionTypeController.DeleteSessionTypeById);
@@ -26,10 +26,11 @@ router.delete('/deleteSessionType/:id',authenticateJWT, sessionTypeController.De
 
 // session routes
 router.post('/createSession',authenticateJWT, sessionController.createSession);
-router.get('/getAllSessions',authenticateJWT, sessionController.getAllSessions);
+router.get('/getAllSessions/:eventId',authenticateJWT, sessionController.getAllSessions);
 router.put('/updateSession/:id',authenticateJWT, sessionController.updateSession);
-router.get('/getSessionById/:id',authenticateJWT, sessionController.getSessionById);
+router.get('/getSession/:id',authenticateJWT, sessionController.getSessionById);
 router.delete('/deleteSession/:id',authenticateJWT, sessionController.deleteSession);
+router.get('/session/dates/:eventId',authenticateJWT, sessionController.getSessionDates);// get dates on which session will be conducteed
 
 
 

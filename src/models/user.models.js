@@ -141,6 +141,15 @@ const findUserByPhone = (phoneNumber) => prisma.user.findUnique({
   where: { phoneNumber: phoneNumber }
 });
 
+const findEventsByUserId = (userId) => {
+  return prisma.eventAttendee.findMany({
+    where: { userId: parseInt(userId) },
+    include: {
+      event: true,
+    },
+  });
+};
+
 module.exports = {
   createUser,
   findUserByEmail,
@@ -155,5 +164,6 @@ module.exports = {
   updateUserDisplayOrder,
   findAllUser,
   findUserByPhone,
-  findUserByEmailOrPhone
+  findUserByEmailOrPhone,
+  findEventsByUserId
 };

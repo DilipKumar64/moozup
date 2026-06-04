@@ -7,7 +7,10 @@ const findSponsorTypeById = (id) => prisma.sponsorType.findUnique({
 });
 
 const findSponsorTypesByEventId = (eventId) => prisma.sponsorType.findMany({
-  where: { eventId: parseInt(eventId) }
+  where: { eventId: parseInt(eventId) },
+  include:{
+    sponsors: true
+  }
 });
 
 const updateSponsorType = (id, data) => prisma.sponsorType.update({

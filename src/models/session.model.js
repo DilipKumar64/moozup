@@ -24,11 +24,19 @@ const findSessionQuestions = (sessionId, status) => prisma.question.findMany({
     ...(status && { status })
   },
   include: {
-    user: {
+    attendee: {
       select: {
         id: true,
-        firstName: true,
-        lastName: true
+        user: {
+          select: {
+            id : true,
+            firstName: true,
+            lastName: true,
+            profilePicture: true,
+            companyName: true,
+            jobTitle: true
+          }
+        }
       }
     }
   },

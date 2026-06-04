@@ -107,6 +107,26 @@ const initializeSocket = (server) => {
       console.log(`User ${socket.userId} left poll room for session ${sessionId}`);
     });
 
+    // Chat room management
+    socket.on('joinChat', async (chatId) => {
+      if (!chatId) {
+        socket.emit('error', { message: 'Chat ID is required' });
+        return;
+      }
+      const roomName = `chat:${chatId}`;
+      socket.join(roomName);
+      console.log(`User ${socket.userId} joined chat room: ${roomName}`);
+    });
+
+    socket.on('leaveChat', (chatId) => {
+      if (!chatId) {
+        socket.emit('error', { message: 'Chat ID is required' });
+        return;
+      }
+      socket.leave(`chat:${chatId}`);
+      console.log(`User ${socket.userId} left chat ${chatId}`);
+    });
+
     // Handle disconnection
     socket.on('disconnect', () => {
        console.log('User disconnected:', socket.userId);
@@ -215,6 +235,36 @@ const emitPollEnded = (sessionId, pollData) => {
   }
 };
 
+// Chat event emitter functions
+const emitChatMessage = (attendeeId, messageData) => {
+  if (!io) {
+    throw new Error('Socket.IO not initialized');
+  }
+  try {
+    const roomName = `chat:${messageData.chatId}`;
+    console.log('Emitting chat message to room:', roomName);
+    console.log('Message data:', messageData);
+    
+    io.to(roomName).emit('newChatMessage', messageData);
+    console.log('Chat message emitted to room:', roomName);
+  } catch (error) {
+    console.error('Error emitting chat message:', error);
+  }
+};
+
+const emitChatUpdate = (attendeeId, chatData) => {
+  if (!io) {
+    throw new Error('Socket.IO not initialized');
+  }
+  try {
+    // Emit to specific attendee
+    io.to(`user:${attendeeId}`).emit('chatUpdate', chatData);
+    console.log('Chat update emitted to user:', attendeeId);
+  } catch (error) {
+    console.error('Error emitting chat update:', error);
+  }
+};
+
 module.exports = {
   initializeSocket,
   getIO: () => io,
@@ -223,5 +273,7 @@ module.exports = {
   emitPollCreated,
   emitPollUpdated,
   emitPollResponse,
-  emitPollEnded
+  emitPollEnded,
+  emitChatMessage,
+  emitChatUpdate
 }; 

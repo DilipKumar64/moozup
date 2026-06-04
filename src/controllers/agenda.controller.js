@@ -14,6 +14,8 @@ const {
   updateSession,
   getSessionById,
   deleteSession,
+  getUniqueSessionDates,
+  getSessionsByEventAndDate,
 } = require("../models/sessionModel");
 const {
   findSessionTypeByName,
@@ -27,6 +29,13 @@ const {
 // 📄 Create Session Type
 // create session
 const { validationResult } = require("express-validator"); // if you're using validation
+const { findUsersByParticipationTypeId } = require("../models/user.models");
+const { findEventAttandeeByParticipationTypeId, checkEventAttendeeExists, findMissingEventAttendeeIds } = require("../models/eventAttendee.model");
+const { connect } = require("../..");
+
+const isIdValid = (id) => {
+  return !isNaN(parseInt(id)) && parseInt(id) > 0;
+};
 
 // Controller function to create a session type
 exports.createSessionType = async (req, res) => {
@@ -55,7 +64,13 @@ exports.createSessionType = async (req, res) => {
 // 📄 Get All Session Types
 exports.GetAllSessionTypes = async (req, res) => {
   try {
-    const types = await getAllSessionTypes();
+    const eventId = req.params.eventId;
+
+    if (!isIdValid(eventId)) {
+      return res.status(400).json({ message: "Invalid event ID" });
+    }
+
+    const types = await getAllSessionTypes(Number(eventId));
     res.status(200).json(types);
   } catch (error) {
     console.error("Get All Error:", error);
@@ -125,7 +140,7 @@ exports.createSession = async (req, res) => {
       eventId,
       sponsorTypeId,
       sponsorName, // sponsorId
-      speakerId,
+      speakers,
       participationTypeId,
       isSpeakathon = false,
       enableFeedback = false,
@@ -146,18 +161,13 @@ exports.createSession = async (req, res) => {
         message: `Invalid sponsorName: No sponsor with ID ${sponsorName} found under sponsorTypeId ${sponsorTypeId}`,
       });
     }
-
     // 🔍 Step 2: Validate speakerId with participationTypeId
-    const speaker = await prisma.user.findFirst({
-      where: {
-        id: Number(speakerId),  // Ensure speakerId is a number
-        participationTypeId: Number(participationTypeId),  // Ensure participationTypeId is a number
-      },
-    });
+    const missingIds = await findMissingEventAttendeeIds(speakers);
 
-    if (!speaker) {
-      return res.status(400).json({
-        message: `Invalid speakerId: No speaker with ID ${speakerId} found under participationTypeId ${participationTypeId}`,
+    if (missingIds.length > 0) {
+      return res.status(404).json({
+        message: "Some EventAttendee IDs not found",
+        missingIds
       });
     }
 
@@ -173,15 +183,17 @@ exports.createSession = async (req, res) => {
         hall,
         track,
         keywords,
-        isSpeakathon,
-        enableFeedback,
-        isLive,
+        isSpeakathon: isSpeakathon === "true" || isSpeakathon === true,
+        enableFeedback: enableFeedback === "true" || enableFeedback === true,
+        isLive: isLive === "true" || isLive === true,
         wentLiveAt: wentLiveAt ? new Date(wentLiveAt) : null,  
         sessionTypeId: Number(sessionTypeId),  
         eventId: Number(eventId),  
         sponsorTypeId: Number(sponsorTypeId),  
-        sponsorName: Number(sponsorName), 
-        speakerId: Number(speakerId),  
+        sponsorName: Number(sponsorName),
+        speakers: {
+          connect: speakers.map(id => ({ id: Number(id) }))
+        },
         participationTypeId: Number(participationTypeId),  
       },
     });
@@ -210,10 +222,21 @@ exports.getAllSessions = async (req, res) => {
     if (!errors.isEmpty()) {
       return res.status(400).json({ success: false, errors: errors.array() });
     }
+    const eventId = req.params.eventId;
+    const { page = 1, limit = 10, date } = req.query;
 
-    const sessions = await getAllSessions();
+    if (!isIdValid(eventId)) {
+      return res.status(400).json({ message: "Invalid event ID" });
+    }
 
-    if (sessions.length === 0) {
+    // Use the new method with pagination and optional date
+    const result = await getSessionsByEventAndDate(Number(eventId), {
+      date,
+      page: Number(page),
+      limit: Number(limit)
+    });
+
+    if (result.sessions.length === 0) {
       return res.status(404).json({
         success: false,
         message: "No sessions found",
@@ -222,7 +245,15 @@ exports.getAllSessions = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Sessions retrieved successfully",
-      data: sessions,
+      data: result.sessions,
+      pagination: {
+        currentPage: result.currentPage,
+        totalPages: result.totalPages,
+        totalSessions: result.total,
+        sessionsPerPage: Number(limit),
+        hasNextPage: result.hasNextPage,
+        hasPreviousPage: result.hasPreviousPage
+      }
     });
   } catch (error) {
     console.error("Error retrieving sessions:", error.message);
@@ -261,15 +292,32 @@ exports.updateSession = async (req, res) => {
       participationTypeId,
       sponsorTypeId,
       sponsorName,
-      speakerId,
+      newSpeakers=[],
+      speakersToRemove=[],
     } = req.body;
 
-    const updatedSession = await updateSession(id, {
+    const missingIds = await findMissingEventAttendeeIds(newSpeakers);
+    console.log(1)
+    if (missingIds.length > 0) {
+      return res.status(404).json({
+        message: "Some EventAttendee IDs not found for adding spekers.",
+        missingIds
+      });
+    }
+    const missingIdsOldSpakers = await findMissingEventAttendeeIds(speakersToRemove);
+
+    if (missingIdsOldSpakers.length > 0) {
+      return res.status(404).json({
+        message: "Some EventAttendee IDs not found for removing speakers.",
+        missingIds
+      });
+    }
+    const dataToUpdate = {
       title,
       description,
       date: new Date(date),
-      startTime: new Date(startTime),
-      endTime: new Date(endTime),
+      startTime: startTime,
+      endTime: endTime,
       venue,
       hall,
       track,
@@ -283,8 +331,12 @@ exports.updateSession = async (req, res) => {
         : null,
       sponsorTypeId: sponsorTypeId ? parseInt(sponsorTypeId) : null,
       sponsorName,
-      speakerId: speakerId ? parseInt(speakerId) : null,
-    });
+      speakers: {
+        connect: newSpeakers.map((item)=>({id: Number(item)}))
+      },
+    };
+    
+    const updatedSession = await updateSession(id,dataToUpdate,speakersToRemove);
 
     if (!updatedSession) {
       return res.status(404).json({
@@ -362,6 +414,42 @@ exports.deleteSession = async (req, res) => {
     });
   }
 };
+
+
+exports.getSessionDates = async (req, res) => {
+  try {
+
+    const eventId = req.params.eventId;
+
+    if (!isIdValid(eventId)) {
+      return res.status(400).json({ message: "Invalid event ID" });
+    }
+    
+    const event = await checkEventAttendeeExists(eventId);
+
+    if(!event){
+      return res.status(404).json({message:"Event not found"})
+    }
+    // Use the new optimized method
+    const dates = await getUniqueSessionDates(Number(eventId));
+
+    if (dates.length === 0) {
+      return res.status(400).json({
+        message: "No sessions found",
+      });
+    }
+    res.status(200).json({
+      message: "Session dates retrieved successfully",
+      dates,
+    });
+  } catch (error) {
+    console.error("Error retrieving sessions:", error.message);
+    res.status(500).json({
+      message: error.message
+    });
+  }
+};
+
 
 // Controller function to create a session Award Type
 

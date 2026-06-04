@@ -8,7 +8,7 @@ const {
   emitPollEnded 
 } = require('../socket');
 const { findSessionById, updateSessionLiveStatus, findSessionQuestions, findSessionsByDate } = require('../models/session.model');
-const { createQuestion, updateQuestion, findQuestionById } = require('../models/question.model');
+const { createQuestion, updateQuestion, findQuestionById, checkQuestionExists } = require('../models/question.model');
 const { 
   createPoll, 
   findPollById, 
@@ -18,9 +18,14 @@ const {
   getPollResults, 
   endPoll, 
   getActivePolls,
-  findPollsByEventId
+  // findPollsByEventId
 } = require('../models/poll.model');
-const prisma = new PrismaClient();
+const { checkEventAttendeeExists } = require('../models/eventAttendee.model');
+
+const isIdValid = (id) => {
+  return !isNaN(parseInt(id)) && parseInt(id) > 0;
+};
+
 
 // Validation middleware
 const validateSessionExists = async (req, res, next) => {
@@ -82,16 +87,24 @@ exports.toggleSessionLive = async (req, res) => {
 };
 
 exports.createQuestion = async (req, res) => {
-  const { sessionId } = req.params;
+  const { sessionId, attendeeId } = req.params;
   const { content } = req.body;
-  const userId = req.user.id;
 
   // Validate request body
   if (!content || typeof content !== 'string' || content.trim().length === 0) {
     return res.status(400).json({ error: 'Question content is required and must be a non-empty string' });
   }
 
+  if(!isIdValid(sessionId) || !isIdValid(attendeeId)){
+    return res.status(400).json({message: "Invalid id."})    
+  }
   try {
+
+    const eventAttendee = await checkEventAttendeeExists(Number(attendeeId));
+
+    if(!eventAttendee){
+      return res.status(400).json({message: "Attendee not found."})
+    }
     // Check if session exists
     const session = await findSessionById(sessionId);
     if (!session) {
@@ -101,7 +114,7 @@ exports.createQuestion = async (req, res) => {
     const question = await createQuestion({
       content: content.trim(),
       sessionId: parseInt(sessionId),
-      userId
+      attendeeId : Number(attendeeId)
     });
 
     // Emit to all users in the session
@@ -134,7 +147,7 @@ exports.updateQuestion = async (req, res) => {
 
   try {
     // Check if question exists
-    const existingQuestion = await findQuestionById(questionId);
+    const existingQuestion = await checkQuestionExists(Number(questionId));
     if (!existingQuestion) {
       return res.status(404).json({ error: 'Question not found' });
     }
@@ -207,7 +220,6 @@ exports.getSessionsByDate = async (req, res) => {
 exports.createPoll = async (req, res) => {
   const { sessionId } = req.params;
   const { question, passCode, pollsLimit, answerType, options, show } = req.body;
-  const userId = req.user.id;
 
   // Validate request body
   if (!question || !answerType || !options || !Array.isArray(options)) {
@@ -288,10 +300,10 @@ exports.getSessionPolls = async (req, res) => {
 
   try {
     let polls;
-    
+ 
     if (eventId) {
       // Get all polls for an event
-      polls = await findPollsByEventId(eventId);
+      // polls = await findPollsByEventId(eventId);
     } else {
       // Get polls for a specific session
       const session = await findSessionById(sessionId);
@@ -300,7 +312,6 @@ exports.getSessionPolls = async (req, res) => {
       }
       polls = await findPollsBySessionId(sessionId);
     }
-
     res.json({
       success: true,
       data: polls,
@@ -316,11 +327,20 @@ exports.getSessionPolls = async (req, res) => {
 };
 
 exports.submitPollResponse = async (req, res) => {
-  const { pollId } = req.params;
+  const { pollId, attendeeId } = req.params;
   const { selectedOptions } = req.body;
-  const userId = req.user.id;
 
   try {
+    if(!isIdValid(pollId) || !isIdValid(attendeeId)){
+      return res.status(400).status({message : "Invalid ids."})
+    }
+
+    const eventAttendee = await checkEventAttendeeExists(Number(attendeeId));
+
+    if(!eventAttendee){
+      return res.status(400).json({message: "Attendee not found."})
+    }
+    
     const poll = await findPollById(pollId);
     if (!poll) {
       return res.status(404).json({ error: 'Poll not found' });
@@ -334,39 +354,30 @@ exports.submitPollResponse = async (req, res) => {
     // Add responses for each selected option
     const responses = await Promise.all(
       selectedOptions.map(optionId => 
-        addPollResponse(pollId, userId, optionId)
+        addPollResponse(pollId, attendeeId, optionId)
       )
     );
 
-    // Get updated poll results
-    const results = await getPollResults(pollId);
-
     // Emit poll response with results
     emitPollResponse(poll.sessionId, pollId, {
-      userId,
-      selectedOptions,
-      results,
-      responses: responses.map(response => ({
-        userId: response.user.id,
-        firstName: response.user.firstName,
-        lastName: response.user.lastName,
-        optionId: response.optionId,
-        optionText: response.option.text,
-        respondedAt: response.createdAt
-      }))
+        pollId,
+        attendeeId,
+        selectedOptions,
+        responses: responses.map(response => ({
+          attendee: response.attendee,
+        }))
     });
 
     res.json({ 
       success: true, 
-      results,
-      responses: responses.map(response => ({
-        userId: response.user.id,
-        firstName: response.user.firstName,
-        lastName: response.user.lastName,
-        optionId: response.optionId,
-        optionText: response.option.text,
-        respondedAt: response.createdAt
-      }))
+      data: {
+        pollId,
+        attendeeId,
+        selectedOptions,
+        responses: responses.map(response => ({ 
+          attendee: response.attendee,
+        }))
+      }
     });
   } catch (error) {
     console.error('Error submitting poll response:', error);

@@ -47,13 +47,16 @@ const {
   addExhibitorPersons,
   addExhibitorDocument,
   getAllExhibitors,
-  deleteExhibitor
+  deleteExhibitor,
+  getExhibitorsByEvent,
+  getExhibitorsForDirectory,
+  getExhibitorDetailById
 } = require('../models/exhibitor.model');
 
 const FileService = require('../services/file.service');
 const { sendWelcomeEmail, sendPasswordEmail } = require('../utils/mailer');
 const bcrypt = require('bcrypt');
-const { createSponsor, findSponsorById, updateSponsor, addSponsorPersons, addSponsorDocument, deleteSponsor, bulkUpdateSponsorDisplayOrder, updateSponsorDisplayOrder, getAllSponsors } = require('../models/sponsor.model');
+const { createSponsor, findSponsorById, updateSponsor, addSponsorPersons, addSponsorDocument, deleteSponsor, bulkUpdateSponsorDisplayOrder, updateSponsorDisplayOrder, getAllSponsors, getSponsorsByEvent, getSponsorsForDirectory, getSponsorDetailById } = require('../models/sponsor.model');
 
 const {
   createParticipationTypeSetting,
@@ -84,6 +87,8 @@ const {
   findInterestAreasByEventId,
   deleteInterestArea
 } = require('../models/interest.area.model');
+const { createEventAttendee, findEventAttendee, findAttendeesByParticipationType, checkEventAttendeeExists, updateEventAttendeeAndUser, deleteEventAttendee, updateEventAttendee, getEventAttendeeById, findEventAttendeeDetail } = require('../models/eventAttendee.model');
+const prisma = require('../config/prisma');
 
 const isIdValid = (id) => {
   return !isNaN(parseInt(id)) && parseInt(id) > 0;
@@ -716,7 +721,8 @@ exports.createDirectoryUser = async (req, res) => {
     twitterUrl,
     webProfile,
     uid,
-    description
+    description,
+    note
   } = req.body;
 
   // Validate required fields
@@ -727,74 +733,86 @@ exports.createDirectoryUser = async (req, res) => {
   }
 
   try {
-    // Check if user with email already exists
-    const existingUser = await findUserByEmail(email);
-    if (existingUser) {
-      return res.status(400).json({
-        message: "A user with this email already exists"
-      });
-    }
-
     // Check if participation type exists
     const participationType = await findParticipationTypeById(participationTypeId);
     if (!participationType) {
       return res.status(404).json({ message: "Participation type not found" });
     }
 
-    // Generate and hash password
-    const generatedPassword = generatePassword();
-    const hashedPassword = await bcrypt.hash(generatedPassword, 10);
+    let user;
+    // Check if user with email already exists
+    const existingUser = await findUserByEmail(email);
+    if (existingUser) {
+      user = existingUser;
+    } else {
+      // Generate and hash password
+      const generatedPassword = generatePassword();
+      const hashedPassword = await bcrypt.hash(generatedPassword, 10);
 
-    // Handle profile picture upload
-    let profilePictureUrl = null;
-    if (req.file) {
-      try {
-        profilePictureUrl = await FileService.uploadProfilePicture(req.file);
-      } catch (uploadError) {
-        return res.status(500).json({
-          message: "Failed to upload profile picture",
-          error: uploadError.message
-        });
+      // Handle profile picture upload
+      let profilePictureUrl = null;
+      if (req.file) {
+        try {
+          profilePictureUrl = await FileService.uploadProfilePicture(req.file);
+        } catch (uploadError) {
+          return res.status(500).json({
+            message: "Failed to upload profile picture",
+            error: uploadError.message
+          });
+        }
       }
+
+      // Create the user
+      user = await createUser({
+        firstName,
+        email,
+        phoneNumber,
+        // participationTypeId: parseInt(participationTypeId),
+        // Optional fields
+        companyName: companyName || null,
+        jobTitle: jobTitle || null,
+        city: city || null,
+        state: state || null,
+        country: country || null,
+        phoneExtension: phoneExtension || null,
+        facebookUrl: facebookUrl || null,
+        linkedinUrl: linkedinUrl || null,
+        twitterUrl: twitterUrl || null,
+        webProfile: webProfile || null,
+        uid: uid || null,
+        // description: description || null,
+        profilePicture: profilePictureUrl,
+        status: true,
+        role: "user",
+        password: hashedPassword
+      });
     }
 
-    // Create the user
-    const user = await createUser({
-      firstName,
-      email,
-      phoneNumber,
+    // Check if user is already in the event
+    const eventId = participationType.eventId;
+    const isUserInEvent = await findEventAttendee(user.id, eventId);
+
+    if (isUserInEvent) {
+      return res.status(200).json({
+        message: "User already in this event",
+        user: {
+          ...user,
+          password: undefined
+        }
+      });
+    }
+
+    const eventAtandee = await createEventAttendee({
+      userId: user.id,
+      eventId: eventId,
       participationTypeId: parseInt(participationTypeId),
-      // Optional fields
-      companyName: companyName || null,
-      jobTitle: jobTitle || null,
-      city: city || null,
-      state: state || null,
-      country: country || null,
-      phoneExtension: phoneExtension || null,
-      facebookUrl: facebookUrl || null,
-      linkedinUrl: linkedinUrl || null,
-      twitterUrl: twitterUrl || null,
-      webProfile: webProfile || null,
-      uid: uid || null,
       description: description || null,
-      profilePicture: profilePictureUrl,
-      status: true,
-      role: "user",
-      password: hashedPassword
+      note: note || null,
     });
 
-    // Send welcome email with generated password
-    // sendWelcomeEmail({
-    //     to: email,
-    //     firstName,
-    //     email,
-    //     password: generatedPassword
-    //   }).catch((err) => {
-    //       console.error("Failed to send welcome email:", err);
-    //   });
-
     res.status(201).json({
-      message: "User created successfully in directory",
+      message: existingUser ? "User added to event successfully" : "User created and added to event successfully",
+      eventAtandee,
       user: {
         ...user,
         password: undefined // Don't send password in response
@@ -834,8 +852,17 @@ exports.updateDirectoryUser = async (req, res) => {
   } = req.body;
 
   try {
+
+    if(!isIdValid(id)){
+      return res.status(400).json({message:"Id not valid"});
+    }
+    // check if attendee exits
+    const attandee = await checkEventAttendeeExists(id)
+    if(!attandee){
+      return res.status(400).json({message:"Attendee not found"})
+    }
     // Check if user exists
-    const existingUser = await findUserById(id);
+    const existingUser = await findUserById(attandee.user.id);
     if (!existingUser) {
       return res.status(404).json({
         message: "User not found"
@@ -879,11 +906,10 @@ exports.updateDirectoryUser = async (req, res) => {
     }
 
     // Prepare update data
-    const updateData = {
+    const updateUserData = {
       firstName: firstName || existingUser.firstName,
       email: email || existingUser.email,
       phoneNumber: phoneNumber || existingUser.phoneNumber,
-      participationTypeId: participationTypeId ? parseInt(participationTypeId) : existingUser.participationTypeId,
       companyName: companyName !== undefined ? companyName : existingUser.companyName,
       jobTitle: jobTitle !== undefined ? jobTitle : existingUser.jobTitle,
       city: city !== undefined ? city : existingUser.city,
@@ -898,15 +924,29 @@ exports.updateDirectoryUser = async (req, res) => {
       description: description !== undefined ? description : existingUser.description,
       profilePicture: profilePictureUrl
     };
+    
+    const updateattendeeData = {
+      participationTypeId: participationTypeId ? parseInt(participationTypeId) : existingUser.participationTypeId,
 
-    // Update the user
-    const updatedUser = await updateUser(id, updateData);
+    }
+    const data =await updateEventAttendeeAndUser(Number(existingUser.id),id,updateUserData,updateattendeeData);
 
     res.status(200).json({
       message: "User updated successfully",
       user: {
-        ...updatedUser,
-        password: undefined // Don't send password in response
+        ...data.user,
+        password: undefined, // Don't send password in response
+        role: null,
+        userType: null,
+        followersCount: null,
+        followingCount: null,
+        hasLoggedIn: null,
+        hasPendingMeeting: null,
+        isMember: null,
+        loginCount: null,
+        id: data.attendee.id,
+        participationTypeId: data.attendee.participationTypeId
+        
       }
     });
   } catch (error) {
@@ -918,29 +958,20 @@ exports.updateDirectoryUser = async (req, res) => {
 };
 
 exports.deleteDirectoryUser = async (req, res) => {
-  const { id } = req.params;
+  const { attendeeId, eventId} = req.query;
 
   try {
+
+    if(!isIdValid(attendeeId)|| !isIdValid(eventId)) {
+      return res.status(400).json({message: "Invalid ids."})
+    }
     // Check if user exists
-    const existingUser = await findUserById(id);
-    if (!existingUser) {
-      return res.status(404).json({
-        message: "User not found"
-      });
+    const attandee = await checkEventAttendeeExists(Number( attendeeId))
+    if(!attandee){
+      return res.status(400).json({message:"Attendee not found"})
     }
 
-    // Delete profile picture if it exists
-    if (existingUser.profilePicture) {
-      try {
-        await FileService.deleteProfilePicture(existingUser.profilePicture);
-      } catch (uploadError) {
-        // Log error but continue with user deletion
-        console.error('Failed to delete profile picture:', uploadError);
-      }
-    }
-
-    // Delete the user
-    await deleteUser(id);
+    await deleteEventAttendee(Number(attendeeId),Number(eventId));
 
     res.status(200).json({
       message: "User deleted successfully"
@@ -957,6 +988,11 @@ exports.updateUserNote = async (req, res) => {
   const { id } = req.params;
   const { note } = req.body;
 
+
+  if(!isIdValid(id)){
+    return res.status(400).json({message:"Invalid attendee id."})
+  }
+
   // Validate note is provided
   if (note === undefined || note === null) {
     return res.status(400).json({
@@ -965,12 +1001,10 @@ exports.updateUserNote = async (req, res) => {
   }
 
   try {
-    // Check if user exists
-    const existingUser = await findUserById(id);
-    if (!existingUser) {
-      return res.status(404).json({
-        message: "User not found"
-      });
+    // Check if attendee exists
+    const attandee = await checkEventAttendeeExists(id)
+    if(!attandee){
+      return res.status(404).json({message:"Attendee not found"})
     }
 
     // Validate note length
@@ -980,15 +1014,11 @@ exports.updateUserNote = async (req, res) => {
       });
     }
 
-    // Update only the note field
-    const updatedUser = await updateUser(id, { note });
+    const updateeEventAttendee = await updateEventAttendee(id,{note: note})
 
     res.status(200).json({
       message: "User note updated successfully",
-      user: {
-        ...updatedUser,
-        password: undefined // Don't send password in response
-      }
+      note: updateeEventAttendee.note
     });
   } catch (error) {
     res.status(500).json({
@@ -1007,15 +1037,65 @@ exports.findAllUser=async(req,res)=>{
         message: "Something went wrong",
         error: error.message
         });
+  }
 }
+
+exports.getPeopleById=async(req,res)=>{
+  try {
+    const {id} = req.params;
+    
+    if(!isIdValid(id)){
+      return res.status(400).json({message:"Inavlid id."})
+    }
+    const pepole = await getEventAttendeeById(id);
+
+    if(!pepole){
+      return res.status(404).json({message:"Attendee not found."})
+    }
+
+    res.status(200).json({
+      message: "Attendee fetched.",
+      attendee: pepole
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+      });
+  }
 }
+exports.getEventAttendeeDetail=async(req,res)=>{
+  try {
+    const {eventId} = req.params;
+    
+    if(!isIdValid(eventId)){
+      return res.status(400).json({message:"Inavlid ids."})
+    }
+    const eventAttendee = await findEventAttendeeDetail(req.user.id, eventId);
 
+    if(!eventAttendee){
+      return res.status(404).json({message:"Attendee not found."})
+    }
 
+    res.status(200).json({
+      message: "EventAttendee fetched.",
+      attendee: {
+        ...eventAttendee,
+        user: {
+          ...eventAttendee.user,
+          password: null
+        }
+      }
+    });
 
-
-
-
-
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message
+      });
+  }
+}
 // Function to generate random 8-character alphanumeric password
 const generatePassword = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -1264,14 +1344,13 @@ exports.updateUserDisplayOrder = async (req, res) => {
 
 exports.getUsersByParticipationType = async (req, res) => {
   const { participationTypeId } = req.params;
-
   // Validate ID
   if (!participationTypeId || isNaN(parseInt(participationTypeId)) || parseInt(participationTypeId) <= 0) {
     return res.status(400).json({
       message: "Invalid participation type ID. ID must be a positive number."
     });
   }
-
+  
   try {
     // First verify if participation type exists
     const participationType = await findParticipationTypeById(participationTypeId);
@@ -1280,6 +1359,7 @@ exports.getUsersByParticipationType = async (req, res) => {
         message: "Participation type not found"
       });
     }
+    console.log("hello=========================");
 
     const users = await findUsersByParticipationTypeId(participationTypeId);
 
@@ -1448,10 +1528,10 @@ exports.updateSponsor = async (req, res) => {
 
 exports.addSponsorPersons = async (req, res) => {
   const { id } = req.params;
-  const { userIds } = req.body;
+  const { attendeeIds } = req.body;
 
   // Validate input
-  if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+  if (!attendeeIds || !Array.isArray(attendeeIds) || attendeeIds.length === 0) {
     return res.status(400).json({
       message: "Please provide an array of user IDs"
     });
@@ -1467,7 +1547,7 @@ exports.addSponsorPersons = async (req, res) => {
     }
 
     // Validate all user IDs are numbers
-    const invalidIds = userIds.filter(id => isNaN(parseInt(id)));
+    const invalidIds = attendeeIds.filter(id => isNaN(parseInt(id)));
     if (invalidIds.length > 0) {
       return res.status(400).json({
         message: "Invalid user IDs provided",
@@ -1476,15 +1556,15 @@ exports.addSponsorPersons = async (req, res) => {
     }
 
     // Validate all users exist
-    const userValidationPromises = userIds.map(async (userId) => {
-      const user = await findUserById(userId);
-      return { userId, exists: !!user };
+    const userValidationPromises = attendeeIds.map(async (attendeeId) => {
+      const user = await checkEventAttendeeExists(attendeeId);
+      return { attendeeId, exists: !!user };
     });
 
     const userValidations = await Promise.all(userValidationPromises);
     const nonExistentUsers = userValidations
       .filter(validation => !validation.exists)
-      .map(validation => validation.userId);
+      .map(validation => validation.attendeeId);
 
     if (nonExistentUsers.length > 0) {
       return res.status(404).json({
@@ -1494,14 +1574,13 @@ exports.addSponsorPersons = async (req, res) => {
     }
 
     // Replace all sponsor persons with new array
-    const updatedSponsor = await addSponsorPersons(id, userIds);
-
+    const updatedSponsor = await addSponsorPersons(id, attendeeIds);
     res.status(200).json({
       message: "Sponsor persons updated successfully",
-      sponsorPersons: updatedSponsor.sponsorPerson.map(person => ({
+      sponsorPersons: updatedSponsor.sponsorPersons.map(person => ({ 
         id: person.id,
-        name: `${person.firstName} ${person.lastName || ''}`.trim(),
-        profilePicture: person.profilePicture
+        name: `${person.user.firstName} ${person.user.lastName || ''}`.trim(),
+        profilePicture: person.user.profilePicture 
       }))
     });
   } catch (error) {
@@ -1600,6 +1679,30 @@ exports.deleteSponsor = async (req, res) => {
     });
   }
 };
+
+exports.getSponsorByid = async (req,res)=>{
+  try{
+    const sponsorId = req.params.id;
+
+    if(!isIdValid(sponsorId)){
+      return res.status(400).json({message:"Invalid sponsor id."});
+    }
+
+    const sponsor  =await getSponsorDetailById(sponsorId);
+
+    if(!sponsor){
+      return res.status(400).json({message: "Sponsor not found"})
+    }
+
+    return res.json({
+      message: "Sponsor fethed.",
+      sponsor: sponsor
+    });
+
+  }catch (e){
+    return res.status(500).json({message:"Something went wrong.",error: e.message})
+  }
+}
 
 exports.bulkUpdateSponsorDisplayOrder = async (req, res) => {
   try {
@@ -1910,10 +2013,10 @@ exports.updateExhibitor = async (req, res) => {
 
 exports.addExhibitorPersons = async (req, res) => {
   const { id } = req.params;
-  const { userIds } = req.body;
+  const { attendeeIds } = req.body;
 
   // Validate input
-  if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+  if (!attendeeIds || !Array.isArray(attendeeIds) || attendeeIds.length === 0) {
     return res.status(400).json({
       message: "Please provide an array of user IDs"
     });
@@ -1929,24 +2032,24 @@ exports.addExhibitorPersons = async (req, res) => {
     }
 
     // Validate all user IDs are numbers
-    const invalidIds = userIds.filter(id => isNaN(parseInt(id)));
+    const invalidIds = attendeeIds.filter(id => isNaN(parseInt(id)));
     if (invalidIds.length > 0) {
       return res.status(400).json({
-        message: "Invalid user IDs provided",
+        message: "Invalid attendee IDs provided",
         invalidIds
       });
     }
 
     // Validate all users exist
-    const userValidationPromises = userIds.map(async (userId) => {
-      const user = await findUserById(userId);
-      return { userId, exists: !!user };
+    const userValidationPromises = attendeeIds.map(async (attendeeId) => {
+      const user = await checkEventAttendeeExists(attendeeId);
+      return { attendeeId, exists: !!user };
     });
 
     const userValidations = await Promise.all(userValidationPromises);
     const nonExistentUsers = userValidations
       .filter(validation => !validation.exists)
-      .map(validation => validation.userId);
+      .map(validation => validation.attendeeId);
 
     if (nonExistentUsers.length > 0) {
       return res.status(404).json({
@@ -1956,16 +2059,16 @@ exports.addExhibitorPersons = async (req, res) => {
     }
 
     // Add users to exhibitor
-    const updatedExhibitor = await addExhibitorPersons(id, userIds);
+    const updatedExhibitor = await addExhibitorPersons(id, attendeeIds);
 
     res.status(200).json({
       message: "Exhibitor persons added successfully",
       exhibitorPersons: updatedExhibitor.exhibitorPersons.map(person => ({
         id: person.id,
-        name: `${person.firstName} ${person.lastName || ''}`.trim(),
-        profilePicture: person.profilePicture
+        name: `${person.user.firstName} ${person.user.lastName || ''}`.trim(),
+        profilePicture: person.user.profilePicture 
       }))
-    });
+    })
   } catch (error) {
     console.error("Add exhibitor persons error:", error);
     res.status(500).json({
@@ -2036,7 +2139,7 @@ exports.uploadExhibitorDocument = async (req, res) => {
   }
 };
 
-exports.getExhibitorById = async (req, res) => {
+exports.getExhibitorsById = async (req, res) => {
   const { id } = req.params;
 
   // Validate ID
@@ -2157,6 +2260,30 @@ exports.deleteExhibitor = async (req, res) => {
     });
   }
 };
+
+exports.getExhibitorById = async (req,res)=>{
+  try{
+    const exhibitorId = req.params.id;
+    console.log(exhibitorId);
+    if(!isIdValid(exhibitorId)){
+      return res.status(400).json({message:"Invalid sponsor id."});
+    }
+
+    const sponsor  =await getExhibitorDetailById(exhibitorId);
+
+    if(!sponsor){
+      return res.status(400).json({message: "Sponsor not found"})
+    }
+
+    return res.json({
+      message: "Sponsor fethed.",
+      sponsor: sponsor
+    });
+
+  }catch (e){
+    return res.status(500).json({message:"Something went wrong.",error: e.message})
+  } 
+}
 
 exports.updateParticipationTypeAttribute = async (req, res) => {
   try {
